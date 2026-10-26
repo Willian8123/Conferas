@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#37352f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Rotinas">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Rotinas do Conferente</title>
+<style>
+:root{
+  --bg:#ffffff; --bg-side:#f7f7f5; --bg-hover:rgba(55,53,47,.08); --text:#37352f; --muted:#787774;
+  --border:#e9e9e7; --callout:#f1f1ef; --code-bg:rgba(135,131,120,.15); --code-text:#eb5757;
+  --blue:#e7f3f8; --blue-t:#183347; --green:#edf3ec; --green-t:#1c3829; --yellow:#fbf3db; --yellow-t:#402c1b;
+  --red:#fdebec; --red-t:#5d1715; --purple:#f6f3f9; --purple-t:#492f64; --orange:#faebdd; --orange-t:#49290e;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#191919; --bg-side:#202020; --bg-hover:rgba(255,255,255,.07); --text:#e6e6e4; --muted:#9b9a97;
+    --border:#2f2f2f; --callout:#252525; --code-bg:rgba(135,131,120,.3); --code-text:#ff8a80;
+    --blue:#1b3340; --blue-t:#a6d5ea; --green:#243d30; --green-t:#a8d8b9; --yellow:#413a22; --yellow-t:#ecd9a0;
+    --red:#4a2a2b; --red-t:#f3b1ae; --purple:#3a2f4a; --purple-t:#d3bfee; --orange:#47331f; --orange-t:#f1c79b;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#191919; --bg-side:#202020; --bg-hover:rgba(255,255,255,.07); --text:#e6e6e4; --muted:#9b9a97;
+  --border:#2f2f2f; --callout:#252525; --code-bg:rgba(135,131,120,.3); --code-text:#ff8a80;
+  --blue:#1b3340; --blue-t:#a6d5ea; --green:#243d30; --green-t:#a8d8b9; --yellow:#413a22; --yellow-t:#ecd9a0;
+  --red:#4a2a2b; --red-t:#f3b1ae; --purple:#3a2f4a; --purple-t:#d3bfee; --orange:#47331f; --orange-t:#f1c79b;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:20px}
+body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5}
+.layout{display:flex;min-height:100vh}
+aside{width:260px;flex:none;background:var(--bg-side);border-right:1px solid var(--border);position:sticky;top:0;height:100vh;overflow:auto;padding:14px 8px}
+aside .ws{display:flex;align-items:center;gap:8px;padding:6px 10px;font-weight:600;font-size:14px}
+aside .ws .logo{width:22px;height:22px;border-radius:4px;background:#37352f;color:#fff;display:grid;place-items:center;font-size:12px}
+aside .label{font-size:12px;color:var(--muted);padding:14px 10px 4px;font-weight:600}
+aside a{display:flex;gap:8px;align-items:center;padding:4px 10px;border-radius:4px;color:var(--text);text-decoration:none;font-size:14px;min-height:28px}
+aside a:hover{background:var(--bg-hover)}
+aside a.on{background:var(--bg-hover);font-weight:600}
+main{flex:1;min-width:0}
+.page{max-width:900px;margin:0 auto;padding:0 56px 120px}
+.cover{height:150px;background:linear-gradient(120deg,#cfe3f1,#e9dff3 55%,#f7e3d4);margin-bottom:-38px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .cover{background:linear-gradient(120deg,#1f3a4d,#33284a 55%,#4a3324)}}
+:root[data-theme="dark"] .cover{background:linear-gradient(120deg,#1f3a4d,#33284a 55%,#4a3324)}
+.icon{font-size:72px;line-height:1;position:relative;margin-top:0}
+h1{font-size:40px;line-height:1.2;margin:14px 0 6px;font-weight:700}
+.sub{color:var(--muted);margin:0 0 20px}
+h2{font-size:26px;margin:44px 0 6px;font-weight:600;border-bottom:1px solid var(--border);padding-bottom:6px}
+h3{font-size:19px;margin:22px 0 6px;font-weight:600}
+.topbar{display:flex;gap:8px;align-items:center;margin:8px 0 4px;flex-wrap:wrap}
+.search{flex:1;min-width:200px;border:1px solid var(--border);border-radius:6px;padding:8px 12px;font:inherit;font-size:14px;background:var(--bg);color:var(--text)}
+.search:focus{outline:2px solid #2383e2;outline-offset:-1px}
+button.btn{border:1px solid var(--border);background:var(--bg);color:var(--text);padding:7px 12px;border-radius:6px;font:inherit;font-size:14px;cursor:pointer}
+button.btn:hover{background:var(--bg-hover)}
+.callout{display:flex;gap:12px;background:var(--callout);border-radius:6px;padding:14px 16px;margin:12px 0}
+.callout.blue{background:var(--blue);color:var(--blue-t)}
+.callout.yellow{background:var(--yellow);color:var(--yellow-t)}
+.callout.red{background:var(--red);color:var(--red-t)}
+.callout.green{background:var(--green);color:var(--green-t)}
+.callout .ci{font-size:20px;line-height:1.4}
+.callout p{margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin:14px 0}
+.card{border:1px solid var(--border);border-radius:8px;padding:14px;text-decoration:none;color:var(--text);transition:background .1s}
+.card:hover{background:var(--bg-hover)}
+.card .e{font-size:24px}
+.card b{display:block;margin-top:6px;font-size:15px}
+.card span{font-size:13px;color:var(--muted)}
+.tag{display:inline-block;padding:0 6px;border-radius:3px;font-size:12px;line-height:20px;margin-right:4px;white-space:nowrap}
+.t-retorno{background:var(--orange);color:var(--orange-t)}
+.t-puxada{background:var(--blue);color:var(--blue-t)}
+.t-carreg{background:var(--green);color:var(--green-t)}
+.t-controle{background:var(--purple);color:var(--purple-t)}
+.t-proc{background:var(--yellow);color:var(--yellow-t)}
+.tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:6px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{text-align:left;color:var(--muted);font-weight:500;padding:8px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--bg-hover)}
+code,.code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);color:var(--code-text);border-radius:4px;padding:2px 6px;font-size:.88em}
+.code{cursor:pointer;white-space:nowrap;border:0}
+.code:hover{filter:brightness(.92)}
+.code.ok{background:#2eaadc;color:#fff}
+details{border-radius:6px;margin:6px 0}
+details>summary{cursor:pointer;list-style:none;padding:6px 8px;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:8px}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"▸";color:var(--muted);transition:transform .12s;display:inline-block;width:14px}
+details[open]>summary::before{transform:rotate(90deg)}
+details>summary:hover{background:var(--bg-hover)}
+details .body{padding:4px 10px 10px 30px}
+.steps{padding-left:0;list-style:none;counter-reset:s;margin:6px 0}
+.steps li{counter-increment:s;display:flex;gap:10px;padding:5px 0;align-items:flex-start}
+.steps li::before{content:counter(s);flex:none;width:22px;height:22px;border-radius:50%;background:var(--code-bg);font-size:12px;display:grid;place-items:center;margin-top:2px}
+.check{display:flex;gap:10px;align-items:flex-start;padding:4px 0}
+.check input{margin-top:6px;width:16px;height:16px;accent-color:#2383e2}
+.check input:checked+span{color:var(--muted);text-decoration:line-through}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.hidden{display:none!important}
+.empty{color:var(--muted);padding:14px;text-align:center}
+.menu-btn{display:none}
+@media (max-width:860px){
+  aside{position:fixed;z-index:20;left:-270px;transition:left .15s;box-shadow:0 0 20px rgba(0,0,0,.2)}
+  aside.open{left:0}
+  .menu-btn{display:inline-block}
+  .page{padding:0 16px 100px}
+  h1{font-size:30px}
+  .two{grid-template-columns:1fr}
+}
+@media print{aside,.topbar,.menu-btn{display:none}.page{padding:0}details{display:block}details>.body{display:block}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside id="side">
+  <div class="ws"><span class="logo">C</span> Conferente</div>
+  <div class="label">Navegação</div>
+  <a href="#inicio">🏠 Início</a>
+  <a href="#rotinas">🗂️ Todas as rotinas</a>
+  <div class="label">Fluxos do dia</div>
+  <a href="#retorno">🔄 Retorno de rota</a>
+  <a href="#puxada">🚚 Puxada / Empurrada</a>
+  <a href="#carregamento">📦 Carregamento</a>
+  <a href="#controle">🏷️ Controle</a>
+  <div class="label">Passo a passo</div>
+  <a href="#proc-placa">🪪 Cadastro de placa</a>
+  <a href="#proc-nf">🧾 Gerar NF manual</a>
+  <a href="#proc-quebra">✂️ Quebrar mapa</a>
+  <a href="#proc-wms">🏭 Liberar mapa no WMS</a>
+  <a href="#proc-tp">🧹 Desassociar / limpar TP</a>
+  <a href="#proc-prior">📊 Planilha de priorização</a>
+  <a href="#proc-matriz">🧠 Matriz de habilidade</a>
+  <a href="#proc-sap">💼 SAP – carretas</a>
+  <div class="label">Referências</div>
+  <a href="#fabricas">🏭 Fábricas (centro)</a>
+  <a href="#chamados">🎫 Chamados (CID)</a>
+  <a href="#check">✅ Checklist do turno</a>
+</aside>
+
+<main>
+<div class="cover"></div>
+<div class="page">
+  <div class="icon" id="inicio">📋</div>
+  <h1>Rotinas do Conferente</h1>
+  <p class="sub">Ambev · Guia rápido de rotinas, procedimentos e chamados</p>
+
+  <div class="topbar">
+    <button class="btn menu-btn" onclick="document.getElementById('side').classList.toggle('open')">☰ Menu</button>
+    <input id="q" class="search" type="search" placeholder="🔎 Buscar rotina, código ou assunto (ex.: placa, 03.11.10, NF)…">
+    <button class="btn" id="theme">🌓 Tema</button>
+    <button class="btn" onclick="window.print()">🖨️ Imprimir</button>
+  </div>
+
+  <div class="callout blue"><span class="ci">💡</span><p>Clique em qualquer código de rotina (ex.: <code>03.11.10</code>) para copiá-lo. Use a busca acima para filtrar as rotinas e os procedimentos.</p></div>
+
+  <div class="cards">
+    <a class="card" href="#retorno"><div class="e">🔄</div><b>Retorno de rota</b><span>Prestação de contas, painéis, refugo</span></a>
+    <a class="card" href="#puxada"><div class="e">🚚</div><b>Puxada / Empurrada</b><span>Placa, OP, mapas, NF</span></a>
+    <a class="card" href="#carregamento"><div class="e">📦</div><b>Carregamento</b><span>Blitz, reposição, produtividade</span></a>
+    <a class="card" href="#controle"><div class="e">🏷️</div><b>Controle</b><span>Etiquetas, PCF, mapa negativo</span></a>
+  </div>
+
+  <h2 id="rotinas">🗂️ Todas as rotinas</h2>
+  <p class="sub">Banco de dados unificado: uma rotina que aparece em mais de um fluxo foi consolidada em uma linha só.</p>
+  <div class="topbar">
+    <button class="btn fil on" data-f="">Todas</button>
+    <button class="btn fil" data-f="Retorno">🔄 Retorno</button>
+    <button class="btn fil" data-f="Puxada">🚚 Puxada</button>
+    <button class="btn fil" data-f="Carregamento">📦 Carregamento</button>
+    <button class="btn fil" data-f="Controle">🏷️ Controle</button>
+    <button class="btn fil" data-f="Procedimento">📝 Procedimento</button>
+  </div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Código</th><th>Rotina</th><th>Para que serve</th><th>Fluxos</th></tr></thead>
+    <tbody id="tb"></tbody>
+  </table></div>
+  <div class="empty hidden" id="none">Nenhuma rotina encontrada.</div>
+
+  <h2 id="retorno">🔄 Retorno de rota</h2>
+  <div class="two"><div>
+    <h3>Ordem sugerida</h3>
+    <ol class="steps">
+      <li><span>Confirmar o status do veículo em <span class="code" data-c="03.11.10">03.11.10</span></span></li>
+      <li><span>Conferir pendências do mapa/placa em <span class="code" data-c="03.03.44.01">03.03.44.01</span></span></li>
+      <li><span>Acompanhar etapas no painel <span class="code" data-c="03.11.20">03.11.20</span> ou <span class="code" data-c="02.01.16">02.01.16</span></span></li>
+      <li><span>Fazer a prestação de contas em <span class="code" data-c="03.03.02">03.03.02</span></span></li>
+      <li><span>Lançar/verificar refugo (<span class="code" data-c="03.11.34.01">03.11.34.01</span> e <span class="code" data-c="03.11.34.07">03.11.34.07</span>)</span></li>
+    </ol>
+  </div><div>
+    <div class="callout yellow"><span class="ci">⚠️</span><p><b>Atenção</b><br>Boleto fica em <code>03.02.06</code> e protocolo de vales em <code>02.12.03.01</code>. Confira os dois antes de encerrar o retorno.</p></div>
+  </div></div>
+
+  <h2 id="puxada">🚚 Puxada / Empurrada</h2>
+  <div class="callout red"><span class="ci">🪪</span><p><b>Cadastro de placa (<code>01.04.01</code>)</b>: abra duas telas da mesma rotina, informe a placa na segunda, exclua a primeira (opção "idem") e preencha tudo na segunda. Isso evita o bloqueio de que só o GOD altera a transportadora. Município: <code>00009668-SP</code>. Passo a passo completo em <a href="#proc-placa">Cadastro de placa</a>.</p></div>
+  <ol class="steps">
+    <li><span>Cadastrar a placa (<span class="code" data-c="01.04.01">01.04.01</span>) e acompanhar a fase da OP/placa (<span class="code" data-c="03.11.20">03.11.20</span>)</span></li>
+    <li><span>Gerar pedidos/NF (<span class="code" data-c="03.11.07.02">03.11.07.02</span>) e, se preciso, NF manual (<span class="code" data-c="03.01.04">03.01.04</span>)</span></li>
+    <li><span>Juntar OPs (<span class="code" data-c="03.11.07.11">03.11.07.11</span>) ou desvincular mapas e OPs (<span class="code" data-c="03.11.07.10">03.11.07.10</span>)</span></li>
+    <li><span>Informar o carregamento (<span class="code" data-c="03.11.01">03.11.01</span>)</span></li>
+    <li><span>Acompanhar placas em trânsito (<span class="code" data-c="03.11.23">03.11.23</span>) e a situação dos mapas (<span class="code" data-c="03.03.12">03.03.12</span>)</span></li>
+  </ol>
+
+  <h2 id="carregamento">📦 Carregamento</h2>
+  <ol class="steps">
+    <li><span>Atualização diária (<span class="code" data-c="03.04.29.04">03.04.29.04</span>) e exportar mapas (<span class="code" data-c="03.02.36.08">03.02.36.08</span>)</span></li>
+    <li><span>Conferir quantidade de mapas e carros no PCD (<span class="code" data-c="03.11.49.02">03.11.49.02</span>)</span></li>
+    <li><span>Trocar equipe/veículo se necessário (<span class="code" data-c="03.03.03">03.03.03</span> / <span class="code" data-c="03.11.11">03.11.11</span>) e placa no WMS (<span class="code" data-c="03.11.46">03.11.46</span>)</span></li>
+    <li><span>Blitz de carregamento (<span class="code" data-c="03.11.35.02">03.11.35.02</span>) e reposição (<span class="code" data-c="03.18.03">03.18.03</span>)</span></li>
+    <li><span>No dia seguinte, analisar volume/produtividade D+1 (<span class="code" data-c="03.01.47.03">03.01.47.03</span>)</span></li>
+  </ol>
+  <div class="callout"><span class="ci">📝</span><p>Rodshow: <code>03.02.33</code>. Ao gerar NF manual de remessa de vasilhame, <b>não enviar para o Rodshow</b>.</p></div>
+
+  <h2 id="controle">🏷️ Controle</h2>
+  <ul>
+    <li>Consulta de etiqueta: <span class="code" data-c="02.08.05">02.08.05</span></li>
+    <li>Cadastro de etiqueta/matéria · crédito manual de SOPI: <span class="code" data-c="02.08.10">02.08.10</span></li>
+    <li>PCF de mapas em aberto: consulta de NF por clientes em <span class="code" data-c="03.02.15">03.02.15</span> (mapa negativo)</li>
+  </ul>
+
+  <h2>📝 Procedimentos passo a passo</h2>
+
+  <details id="proc-placa" data-s="cadastro placa carreta veiculo 01.14.01 01.04.01 transportadora perfil"><summary>🪪 Cadastro de placa (carreta) · <span class="code" data-c="01.14.01">01.14.01</span></summary>
+  <div class="body"><ol class="steps">
+    <li><span>Consultar o número do veículo em <code>03.11.10</code></span></li>
+    <li><span>Preencher: marca do veículo · veículo <b>Carreta</b> · município <b>SP – 00009668</b> · EDI <b>1</b> · RENAVAM <b>1</b> · UF <b>SP</b> · tipo <b>F – Fixo</b></span></li>
+    <li><span>Transportadora: <b>verificar</b> qual é a correta</span></li>
+    <li><span>Vincular perfil: <b>Carreta 101</b></span></li>
+    <li><span>Abrir uma <b>segunda tela</b> da mesma rotina, informar a placa e deixar as duas abertas</span></li>
+    <li><span>Excluir a primeira (com tudo preenchido), preencher novamente na segunda tela e <b>salvar</b></span></li>
+  </ol></div></details>
+
+  <details id="proc-nf" data-s="nf manual simples remessa vasilhame caderninho setor 999 vendedor 9 03.01.04"><summary>🧾 Gerar NF manual · <span class="code" data-c="03.01.04">03.01.04</span></summary>
+  <div class="body"><ol class="steps">
+    <li><span>Abrir o <b>caderninho do mapa</b></span></li>
+    <li><span>Setor <b>999</b> (se estiver bloqueado, pedir liberação) · tipo <b>Simples remessa</b></span></li>
+    <li><span>Vendedor <b>9</b> – remessa de vasilhame</span></li>
+    <li><span>Itens: código do AG + quantidade e clicar no caderninho para lançar</span></li>
+    <li><span>Salvar lista · <b>não enviar para Rodshow</b> · confirmar</span></li>
+  </ol></div></details>
+
+  <details id="proc-quebra" data-s="quebrar mapa 03.03.11 transferencia nota"><summary>✂️ Quebrar mapa · <span class="code" data-c="03.03.11">03.03.11</span></summary>
+  <div class="body"><ol class="steps">
+    <li><span>Informar o <b>mapa atual</b> e a <b>nota que vai retirar</b> (TAB, TAB)</span></li>
+    <li><span>Anotar o mapa de transferência do que será retirado e o <b>novo mapa</b></span></li>
+    <li><span>Se houver mais de uma nota para retirar, informar o mapa novo em cada uma (TAB)</span></li>
+    <li><span>Inserir o mapa antigo de transferência e clicar em <b>Transferir</b></span></li>
+  </ol></div></details>
+
+  <details id="proc-wms" data-s="liberar mapa wms saldo estoque ressuprimento picking app contagem manual"><summary>🏭 Liberação de mapas no WMS</summary>
+  <div class="body">
+    <p>Para mapa <b>com ou sem saldo</b> de estoque (ressuprimento: picking, armazenagem etc.). Pode ser feito pelo app, <b>um mapa por vez</b>.</p>
+    <ol class="steps">
+      <li><span>Separação</span></li><li><span>Cargas</span></li><li><span>Liberação de documentos</span></li>
+      <li><span>Selecionar mapa e box</span></li><li><span>Liberar mapa</span></li>
+    </ol>
+    <div class="callout yellow"><span class="ci">⚠️</span><p>Se pedir item que já está na posição, faça <b>contagem manual</b> do item. Se o item existe no picking mas pede ajuste, gere contagem manual para criar a tarefa de contagem no local e gerar saldo.</p></div>
+  </div></details>
+
+  <details id="proc-tp" data-s="wms desassociar tp limpar ajuste fisico excluir"><summary>🧹 WMS – desassociar ou limpar TP</summary>
+  <div class="body"><ol class="steps">
+    <li><span>Ir em <b>Ajuste físico</b></span></li>
+    <li><span>Localizar o TP (ex.: TP01)</span></li>
+    <li><span>Clicar em <b>Excluir</b></span></li>
+  </ol></div></details>
+
+  <details id="proc-prior" data-s="planilha priorizacao pcd csv colunas"><summary>📊 Planilha de priorização (PCD)</summary>
+  <div class="body"><ol class="steps">
+    <li><span>Salvar o PCD como <code>PCD.csv</code> (qualquer pasta)</span></li>
+    <li><span>Na planilha, apagar da coluna <b>B até AN2</b></span></li>
+    <li><span>Copiar o PCD e colar a partir da coluna <b>B</b></span></li>
+  </ol></div></details>
+
+  <details id="proc-matriz" data-s="matriz habilidade task interleaving priorizacao operador funcionario novo"><summary>🧠 Priorização de carregamento do operador (WMS)</summary>
+  <div class="body"><ol class="steps">
+    <li><span>WMS → <b>Task Interleaving</b> → <b>Matriz de habilidade</b></span></li>
+    <li><span>Funcionário novo: <b>Nova matriz</b>. Existente: pesquisar o usuário pelo nome</span></li>
+    <li><span>Abrir <b>Habilidade</b>: a sequência da aba direita é a prioridade, de cima para baixo</span></li>
+    <li><span>Para alterar, clicar em <b>Ações</b> (lápis)</span></li>
+  </ol></div></details>
+
+  <details id="proc-sap" data-s="sap zc_ra33 zv_r0051 carretas pca csv centro atribuicao"><summary>💼 SAP – informações das carretas</summary>
+  <div class="body"><ol class="steps">
+    <li><span>Transação <code>ZC_RA33</code> (consultar a placa) e depois <code>ZV_R0051</code></span></li>
+    <li><span>Centro: <b>260</b> · Atribuição: <b>970</b></span></li>
+    <li><span>Salvar como <code>Zcra.csv</code> e usar para puxar as informações das carretas no PCA</span></li>
+  </ol>
+  <div class="callout green"><span class="ci">🔐</span><p>Acessos (Telnet, Wi-Fi, logins) foram propositalmente deixados de fora desta página. Guarde-os em um gerenciador de senhas.</p></div></div></details>
+
+  <h2 id="fabricas">🏭 Fábricas (centro)</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Centro</th><th>Unidade</th></tr></thead>
+    <tbody>
+      <tr><td><span class="code" data-c="260">260</span></td><td>Jacareí</td></tr>
+      <tr><td><span class="code" data-c="891">891</span></td><td>Guarulhos</td></tr>
+      <tr><td><span class="code" data-c="952">952</span></td><td>Jaguariúna</td></tr>
+      <tr><td><span class="code" data-c="424">424</span></td><td>Louveira</td></tr>
+      <tr><td><span class="code" data-c="324">324</span></td><td>Extrema</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2 id="chamados">🎫 Chamados (CID / Atendimento Ambev)</h2>
+  <p>Canais: app <b>Atendimento Ambev</b> (Play Store) ou ferramenta de chamados <b>CID</b> (mesmo sistema do Promax). Abra pela oferta correta:</p>
+  <div class="callout red"><span class="ci">🚨</span><p><b>Cancelamento ou exclusão de mapa</b> exige obrigatoriamente as ofertas <code>STI12783</code> (cancelamento) e <code>STI12784</code> (exclusão).</p></div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Assunto</th><th>Oferta</th><th>Código</th></tr></thead>
+    <tbody>
+      <tr><td>Wi-Fi</td><td>Problema/Indisponibilidade Wi-Fi Armazém</td><td><span class="code" data-c="STI11868">STI11868</span></td></tr>
+      <tr><td>Cadastros</td><td>WMS 2nd Tier – Cadastro de Item</td><td><span class="code" data-c="STI12779">STI12779</span></td></tr>
+      <tr><td>Cadastros</td><td>WMS 2nd Tier – Cadastro de Usuário</td><td><span class="code" data-c="STI12780">STI12780</span></td></tr>
+      <tr><td>Cadastros</td><td>WMS 2nd Tier – Cadastro de Endereço</td><td><span class="code" data-c="STI12781">STI12781</span></td></tr>
+      <tr><td>Cadastros</td><td>WMS 2nd Tier – Cadastro de Região</td><td><span class="code" data-c="STI12782">STI12782</span></td></tr>
+      <tr><td>Mapas</td><td>WMS 2nd Tier – Cancelamento de Mapa</td><td><span class="code" data-c="STI12783">STI12783</span></td></tr>
+      <tr><td>Mapas</td><td>WMS 2nd Tier – Exclusão de Mapa</td><td><span class="code" data-c="STI12784">STI12784</span></td></tr>
+      <tr><td>App/Mapas</td><td>WMS 2nd Tier – Instalação/Configuração App</td><td><span class="code" data-c="STI12787">STI12787</span></td></tr>
+      <tr><td>App/Mapas</td><td>WMS 2nd Tier – Liberação de Mapas</td><td><span class="code" data-c="STI12788">STI12788</span></td></tr>
+      <tr><td>App/Mapas</td><td>WMS 2nd Tier – Regra Montagem – Novo OCP</td><td><span class="code" data-c="STI12789">STI12789</span></td></tr>
+      <tr><td>Geral WMS</td><td>WMS 2nd Tier – Solicitações</td><td><span class="code" data-c="STI12173">STI12173</span></td></tr>
+      <tr><td>Geral WMS</td><td>WMS 2nd Tier – Dúvida</td><td><span class="code" data-c="STI12177">STI12177</span></td></tr>
+      <tr><td>Geral WMS</td><td>WMS 2nd Tier – Lentidão</td><td><span class="code" data-c="STI12181">STI12181</span></td></tr>
+      <tr><td>Geral WMS</td><td>WMS 2nd Tier – Indisponibilidade</td><td><span class="code" data-c="STI12786">STI12786</span></td></tr>
+      <tr><td>Geral WMS</td><td>WMS 2nd Tier – Erros/Problemas</td><td><span class="code" data-c="STI12785">STI12785</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h2 id="check">✅ Checklist do turno</h2>
+  <p class="sub">Marcações ficam salvas neste navegador.</p>
+  <div id="checks"></div>
+  <button class="btn" id="reset" style="margin-top:10px">Limpar checklist</button>
+</div>
+</main>
+</div>
+
+<script>
+const R=[
+["03.03.02","Prestação de contas","Fechar a prestação de contas do retorno","Retorno"],
+["03.03.44.01","Status do mapa/placa","Ver o que enviar ao WMS e se há pendência de processo","Retorno"],
+["02.01.16","Painel de processos do WMS","Acompanhar processos do WMS (mapa/OP)","Retorno"],
+["03.11.20","Painel de etapas do mapa/OP","Acompanhar fase da OP/placa e exportar informações","Retorno,Puxada"],
+["03.11.09","Carga montada","Consultar cargas montadas","Retorno"],
+["03.11.01","Informar carregamento","Informar o carregamento do mapa/OP","Retorno,Puxada"],
+["03.11.34.01","Blitz de refugo","Blitz de refugo","Retorno"],
+["03.11.34.07","Informativo de refugo","Refugos lançados e sorteados","Retorno"],
+["03.11.10","Status do veículo","Liberado, pré-cadastro, trânsito… e número do veículo","Retorno,Puxada,Carregamento,Procedimento"],
+["02.12.03.01","Protocolo de vales gerados","Consultar protocolo de vales","Retorno"],
+["03.11.11","Alteração de equipe","Trocar a equipe","Retorno,Carregamento"],
+["03.02.06","Boleto","Consulta/emissão de boleto","Retorno"],
+["01.04.01","Cadastro de placa","Cadastrar placa (usar o truque das duas telas)","Puxada,Procedimento"],
+["03.11.07.11","Junção de OP","Juntar OPs","Puxada"],
+["03.03.12","Situação de mapas","Ver situação dos mapas","Puxada"],
+["03.11.23","Placas em trânsito","Acompanhar placas em trânsito","Puxada"],
+["03.03.13","Consulta de NF do mapa","Notas do mapa","Puxada"],
+["03.11.07.09","Relatório da situação das OPs","Situação das OPs","Puxada"],
+["03.11.07.10","Desvincular mapas e OPs","Desvincular mapas e OPs","Puxada"],
+["03.11.13","Substituição de veículos","Trocar o veículo da carga","Puxada"],
+["03.11.07.02","Geração de pedidos/NF","Gerar pedidos e NF","Puxada"],
+["03.01.04","Gerar NF manual","Simples remessa / vasilhame","Puxada,Procedimento"],
+["03.04.29.04","Atualização diária","Atualização diária do carregamento","Carregamento"],
+["03.02.15","Consulta de cliente e notas","Consulta de NF por cliente; PCF de mapa negativo","Carregamento,Controle"],
+["03.02.36.08","Exportar mapas","Exportar mapas","Carregamento"],
+["03.11.46","Substituição de placas no WMS","Trocar placa no WMS","Carregamento"],
+["03.03.03","Alteração de equipe/veículo","Alterar equipe ou veículo","Carregamento"],
+["03.11.35.02","Blitz de carregamento","Blitz de carregamento","Carregamento"],
+["03.18.03","Reposição","Reposição","Carregamento"],
+["03.11.49.02","PCD – mapas e carros","Quantidade de mapas e carros","Carregamento"],
+["03.01.47.03","Volume / produtividade D+1","Análise de produtividade do dia anterior","Carregamento"],
+["03.02.33","Rodshow","Rodshow","Carregamento"],
+["02.08.05","Consulta de etiqueta","Consultar etiqueta","Controle"],
+["02.08.10","Cadastro de etiqueta/matéria","Crédito manual de SOPI","Controle"],
+["01.14.01","Cadastro de placa (carreta)","Cadastro específico de carreta","Procedimento"],
+["03.01.47.01","CDP","Quebra 1 geral → visualizar → CSV; filtrar por cliente, produto, PDV","Procedimento"],
+["03.03.11","Quebrar mapa","Transferir nota para novo mapa","Procedimento"]
+];
+const cls={Retorno:"t-retorno",Puxada:"t-puxada",Carregamento:"t-carreg",Controle:"t-controle",Procedimento:"t-proc"};
+const tb=document.getElementById("tb");
+tb.innerHTML=R.map(r=>`<tr data-f="${r[3]}" data-s="${(r[0]+' '+r[1]+' '+r[2]).toLowerCase()}">
+<td><span class="code" data-c="${r[0]}">${r[0]}</span></td><td><b>${r[1]}</b></td><td>${r[2]}</td>
+<td>${r[3].split(",").map(t=>`<span class="tag ${cls[t]}">${t}</span>`).join("")}</td></tr>`).join("");
+
+let filtro="";
+function aplicar(){
+  const q=document.getElementById("q").value.trim().toLowerCase();
+  let n=0;
+  tb.querySelectorAll("tr").forEach(tr=>{
+    const ok=(!filtro||tr.dataset.f.split(",").includes(filtro))&&(!q||tr.dataset.s.includes(q));
+    tr.classList.toggle("hidden",!ok); if(ok)n++;
+  });
+  document.getElementById("none").classList.toggle("hidden",n>0);
+  document.querySelectorAll("details[data-s]").forEach(d=>{
+    const hit=q&&d.dataset.s.includes(q);
+    d.classList.toggle("hidden",!!q&&!hit);
+    if(hit)d.open=true;
+  });
+}
+document.getElementById("q").addEventListener("input",aplicar);
+document.querySelectorAll(".fil").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".fil").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on");b.style.fontWeight="600";
+  document.querySelectorAll(".fil:not(.on)").forEach(x=>x.style.fontWeight="");
+  filtro=b.dataset.f;aplicar();
+}));
+
+document.addEventListener("click",e=>{
+  const c=e.target.closest(".code[data-c]");
+  if(!c)return;
+  const t=c.dataset.c;
+  const done=()=>{const old=c.textContent;c.classList.add("ok");c.textContent="copiado!";setTimeout(()=>{c.classList.remove("ok");c.textContent=old},900)};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,done)}else done();
+});
+
+const items=[
+ "Conferir status dos veículos (03.11.10)",
+ "Atualização diária feita (03.04.29.04)",
+ "Mapas exportados e PCD conferido",
+ "Pendências de mapa/placa verificadas (03.03.44.01)",
+ "Carregamentos informados (03.11.01)",
+ "Prestações de contas do retorno concluídas (03.03.02)",
+ "Refugos lançados e conferidos",
+ "Boletos e protocolos de vales conferidos",
+ "Passagem de turno anotada"
+];
+const KEY="conferente_check_v1";
+function load(){try{return JSON.parse(localStorage.getItem(KEY)||"{}")}catch(e){return{}}}
+function save(s){try{localStorage.setItem(KEY,JSON.stringify(s))}catch(e){}}
+const st=load();
+const box=document.getElementById("checks");
+items.forEach((t,i)=>{
+  const l=document.createElement("label");l.className="check";
+  l.innerHTML=`<input type="checkbox" ${st[i]?"checked":""}><span>${t}</span>`;
+  l.querySelector("input").addEventListener("change",ev=>{st[i]=ev.target.checked;save(st)});
+  box.appendChild(l);
+});
+document.getElementById("reset").onclick=()=>{box.querySelectorAll("input").forEach(i=>i.checked=false);Object.keys(st).forEach(k=>delete st[k]);save(st)};
+
+document.getElementById("theme").onclick=()=>{
+  const r=document.documentElement;
+  const dark=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme:dark)").matches;
+  r.dataset.theme=dark?"light":"dark";
+};
+
+const links=[...document.querySelectorAll("aside a")];
+const obs=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting){
+  links.forEach(a=>a.classList.toggle("on",a.getAttribute("href")==="#"+en.target.id));
+}})},{rootMargin:"-10% 0px -80% 0px"});
+links.forEach(a=>{const t=document.querySelector(a.getAttribute("href"));if(t)obs.observe(t)});
+links.forEach(a=>a.addEventListener("click",()=>document.getElementById("side").classList.remove("open")));
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{})});
+}
+</script>
+</body>
+</html>

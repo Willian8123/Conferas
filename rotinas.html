@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#37352f">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<title>Todas as rotinas</title>
+<link rel="stylesheet" href="ocorr.css">
+<link rel="stylesheet" href="paginas.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Menu</a>
+  <div class="ico">🗂️</div>
+  <h1>Todas as rotinas</h1>
+  <p class="sub">Busque pelo código ou pelo nome da rotina.</p>
+
+  <div class="topbar"><input id="q" class="search" type="search" autocomplete="off" placeholder="🔎 Buscar rotina, código ou assunto (ex.: placa, 03.11.10, NF)"></div>
+  <div class="topbar">
+    <button class="btn fil on" data-f="">Todas</button>
+    <button class="btn fil" data-f="Retorno">🔄 Retorno</button>
+    <button class="btn fil" data-f="Puxada">🚚 Puxada</button>
+    <button class="btn fil" data-f="Carregamento">📦 Carregamento</button>
+    <button class="btn fil" data-f="Controle">🏷️ Controle</button>
+    <button class="btn fil" data-f="Procedimento">📝 Procedimento</button>
+  </div>
+  <p class="sub" style="margin-top:12px">Toque em um código para copiá-lo.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Código</th><th>Rotina</th><th>Para que serve</th><th>Fluxos</th></tr></thead>
+    <tbody id="tb"></tbody>
+  </table></div>
+  <div class="empty hidden" id="none">Nenhuma rotina encontrada.</div>
+</div>
+<script src="util.js"></script>
+<script>
+const R=[
+["03.03.02","Prestação de contas","Fechar a prestação de contas do retorno","Retorno"],
+["03.03.44.01","Status do mapa/placa","Ver o que enviar ao WMS e se há pendência de processo","Retorno"],
+["02.01.16","Painel de processos do WMS","Acompanhar processos do WMS (mapa/OP)","Retorno"],
+["03.11.20","Painel de etapas do mapa/OP","Acompanhar fase da OP/placa e exportar informações","Retorno,Puxada"],
+["03.11.09","Carga montada","Consultar cargas montadas","Retorno"],
+["03.11.01","Informar carregamento","Informar o carregamento do mapa/OP","Retorno,Puxada"],
+["03.11.34.01","Blitz de refugo","Blitz de refugo","Retorno"],
+["03.11.34.07","Informativo de refugo","Refugos lançados e sorteados","Retorno"],
+["03.11.10","Status do veículo","Liberado, pré-cadastro, trânsito… e número do veículo","Retorno,Puxada,Carregamento,Procedimento"],
+["02.12.03.01","Protocolo de vales gerados","Consultar protocolo de vales","Retorno"],
+["03.11.11","Alteração de equipe","Trocar a equipe","Retorno,Carregamento"],
+["03.02.06","Boleto","Consulta/emissão de boleto","Retorno"],
+["01.04.01","Cadastro de placa","Cadastrar placa (usar o truque das duas telas)","Puxada,Procedimento"],
+["03.11.07.11","Junção de OP","Juntar OPs","Puxada"],
+["03.03.12","Situação de mapas","Ver situação dos mapas","Puxada"],
+["03.11.23","Placas em trânsito","Acompanhar placas em trânsito","Puxada"],
+["03.03.13","Consulta de NF do mapa","Notas do mapa","Puxada"],
+["03.11.07.09","Relatório da situação das OPs","Situação das OPs","Puxada"],
+["03.11.07.10","Desvincular mapas e OPs","Desvincular mapas e OPs","Puxada"],
+["03.11.13","Substituição de veículos","Trocar o veículo da carga","Puxada"],
+["03.11.07.02","Geração de pedidos/NF","Gerar pedidos e NF","Puxada"],
+["03.01.04","Gerar NF manual","Simples remessa / vasilhame","Puxada,Procedimento"],
+["03.04.29.04","Atualização diária","Atualização diária do carregamento","Carregamento"],
+["03.02.15","Consulta de cliente e notas","Consulta de NF por cliente; PCF de mapa negativo","Carregamento,Controle"],
+["03.02.36.08","Exportar mapas","Exportar mapas","Carregamento"],
+["03.11.46","Substituição de placas no WMS","Trocar placa no WMS","Carregamento"],
+["03.03.03","Alteração de equipe/veículo","Alterar equipe ou veículo","Carregamento"],
+["03.11.35.02","Blitz de carregamento","Blitz de carregamento","Carregamento"],
+["03.18.03","Reposição","Reposição","Carregamento"],
+["03.11.49.02","PCD – mapas e carros","Quantidade de mapas e carros","Carregamento"],
+["03.01.47.03","Volume / produtividade D+1","Análise de produtividade do dia anterior","Carregamento"],
+["03.02.33","Rodshow","Rodshow","Carregamento"],
+["02.08.05","Consulta de etiqueta","Consultar etiqueta","Controle"],
+["02.08.10","Cadastro de etiqueta/matéria","Crédito manual de SOPI","Controle"],
+["01.14.01","Cadastro de placa (carreta)","Cadastro específico de carreta","Procedimento"],
+["03.01.47.01","CDP","Quebra 1 geral → visualizar → CSV; filtrar por cliente, produto, PDV","Procedimento"],
+["03.03.11","Quebrar mapa","Transferir nota para novo mapa","Procedimento"]
+];
+const cls={Retorno:"t-retorno",Puxada:"t-puxada",Carregamento:"t-carreg",Controle:"t-controle",Procedimento:"t-proc"};
+const tb=document.getElementById("tb");
+tb.innerHTML=R.map(r=>`<tr data-f="${r[3]}" data-s="${(r[0]+' '+r[1]+' '+r[2]).toLowerCase()}">
+<td><span class="code" data-c="${r[0]}">${r[0]}</span></td><td><b>${r[1]}</b></td><td>${r[2]}</td>
+<td>${r[3].split(",").map(t=>`<span class="tag ${cls[t]}">${t}</span>`).join("")}</td></tr>`).join("");
+
+let filtro="";
+function aplicar(){
+  const q=document.getElementById("q").value.trim().toLowerCase();
+  let n=0;
+  tb.querySelectorAll("tr").forEach(tr=>{
+    const ok=(!filtro||tr.dataset.f.split(",").includes(filtro))&&(!q||tr.dataset.s.includes(q));
+    tr.classList.toggle("hidden",!ok); if(ok)n++;
+  });
+  document.getElementById("none").classList.toggle("hidden",n>0);
+}
+document.getElementById("q").addEventListener("input",aplicar);
+document.querySelectorAll(".fil").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".fil").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on");b.style.fontWeight="600";
+  document.querySelectorAll(".fil:not(.on)").forEach(x=>x.style.fontWeight="");
+  filtro=b.dataset.f;aplicar();
+}));
+
+
+// vindo de outra página: ?f=Retorno ou ?q=placa
+(function(){
+  const sp=new URLSearchParams(location.search);
+  const f=sp.get("f"),qq=sp.get("q");
+  if(qq)document.getElementById("q").value=qq;
+  if(f){const b=[...document.querySelectorAll(".fil")].find(x=>x.dataset.f===f);if(b)b.click();}
+  else aplicar();
+})();
+
+</script>
+</body>
+</html>

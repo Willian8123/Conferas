@@ -11,533 +11,74 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Rotinas do Conferente</title>
-<style>
-:root{
-  --bg:#ffffff; --bg-side:#f7f7f5; --bg-hover:rgba(55,53,47,.08); --text:#37352f; --muted:#787774;
-  --border:#e9e9e7; --callout:#f1f1ef; --code-bg:rgba(135,131,120,.15); --code-text:#eb5757;
-  --blue:#e7f3f8; --blue-t:#183347; --green:#edf3ec; --green-t:#1c3829; --yellow:#fbf3db; --yellow-t:#402c1b;
-  --red:#fdebec; --red-t:#5d1715; --purple:#f6f3f9; --purple-t:#492f64; --orange:#faebdd; --orange-t:#49290e;
-}
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
-    --bg:#191919; --bg-side:#202020; --bg-hover:rgba(255,255,255,.07); --text:#e6e6e4; --muted:#9b9a97;
-    --border:#2f2f2f; --callout:#252525; --code-bg:rgba(135,131,120,.3); --code-text:#ff8a80;
-    --blue:#1b3340; --blue-t:#a6d5ea; --green:#243d30; --green-t:#a8d8b9; --yellow:#413a22; --yellow-t:#ecd9a0;
-    --red:#4a2a2b; --red-t:#f3b1ae; --purple:#3a2f4a; --purple-t:#d3bfee; --orange:#47331f; --orange-t:#f1c79b;
-  }
-}
-:root[data-theme="dark"]{
-  --bg:#191919; --bg-side:#202020; --bg-hover:rgba(255,255,255,.07); --text:#e6e6e4; --muted:#9b9a97;
-  --border:#2f2f2f; --callout:#252525; --code-bg:rgba(135,131,120,.3); --code-text:#ff8a80;
-  --blue:#1b3340; --blue-t:#a6d5ea; --green:#243d30; --green-t:#a8d8b9; --yellow:#413a22; --yellow-t:#ecd9a0;
-  --red:#4a2a2b; --red-t:#f3b1ae; --purple:#3a2f4a; --purple-t:#d3bfee; --orange:#47331f; --orange-t:#f1c79b;
-}
-*{box-sizing:border-box}
-html{scroll-behavior:smooth;scroll-padding-top:20px}
-body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5}
-.layout{display:flex;min-height:100vh}
-aside{width:260px;flex:none;background:var(--bg-side);border-right:1px solid var(--border);position:sticky;top:0;height:100vh;overflow:auto;padding:14px 8px}
-aside .ws{display:flex;align-items:center;gap:8px;padding:6px 10px;font-weight:600;font-size:14px}
-aside .ws .logo{width:22px;height:22px;border-radius:4px;background:#37352f;color:#fff;display:grid;place-items:center;font-size:12px}
-aside .label{font-size:12px;color:var(--muted);padding:14px 10px 4px;font-weight:600}
-aside a{display:flex;gap:8px;align-items:center;padding:4px 10px;border-radius:4px;color:var(--text);text-decoration:none;font-size:14px;min-height:28px}
-aside a:hover{background:var(--bg-hover)}
-aside a.on{background:var(--bg-hover);font-weight:600}
-main{flex:1;min-width:0}
-.page{max-width:900px;margin:0 auto;padding:0 56px 120px}
-.cover{height:150px;background:linear-gradient(120deg,#cfe3f1,#e9dff3 55%,#f7e3d4);margin-bottom:-38px}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .cover{background:linear-gradient(120deg,#1f3a4d,#33284a 55%,#4a3324)}}
-:root[data-theme="dark"] .cover{background:linear-gradient(120deg,#1f3a4d,#33284a 55%,#4a3324)}
-.icon{font-size:72px;line-height:1;position:relative;margin-top:0}
-h1{font-size:40px;line-height:1.2;margin:14px 0 6px;font-weight:700}
-.sub{color:var(--muted);margin:0 0 20px}
-h2{font-size:26px;margin:44px 0 6px;font-weight:600;border-bottom:1px solid var(--border);padding-bottom:6px}
-h3{font-size:19px;margin:22px 0 6px;font-weight:600}
-.topbar{display:flex;gap:8px;align-items:center;margin:8px 0 4px;flex-wrap:wrap}
-.search{flex:1;min-width:200px;border:1px solid var(--border);border-radius:6px;padding:8px 12px;font:inherit;font-size:14px;background:var(--bg);color:var(--text)}
-.search:focus{outline:2px solid #2383e2;outline-offset:-1px}
-button.btn{border:1px solid var(--border);background:var(--bg);color:var(--text);padding:7px 12px;border-radius:6px;font:inherit;font-size:14px;cursor:pointer}
-button.btn:hover{background:var(--bg-hover)}
-.callout{display:flex;gap:12px;background:var(--callout);border-radius:6px;padding:14px 16px;margin:12px 0}
-.callout.blue{background:var(--blue);color:var(--blue-t)}
-.callout.yellow{background:var(--yellow);color:var(--yellow-t)}
-.callout.red{background:var(--red);color:var(--red-t)}
-.callout.green{background:var(--green);color:var(--green-t)}
-.callout .ci{font-size:20px;line-height:1.4}
-.callout p{margin:0}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin:14px 0}
-.card{border:1px solid var(--border);border-radius:8px;padding:14px;text-decoration:none;color:var(--text);transition:background .1s}
-.card:hover{background:var(--bg-hover)}
-.card .e{font-size:24px}
-.card b{display:block;margin-top:6px;font-size:15px}
-.card span{font-size:13px;color:var(--muted)}
-.tag{display:inline-block;padding:0 6px;border-radius:3px;font-size:12px;line-height:20px;margin-right:4px;white-space:nowrap}
-.t-retorno{background:var(--orange);color:var(--orange-t)}
-.t-puxada{background:var(--blue);color:var(--blue-t)}
-.t-carreg{background:var(--green);color:var(--green-t)}
-.t-controle{background:var(--purple);color:var(--purple-t)}
-.t-proc{background:var(--yellow);color:var(--yellow-t)}
-.tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:6px}
-table{border-collapse:collapse;width:100%;font-size:14px}
-th{text-align:left;color:var(--muted);font-weight:500;padding:8px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
-td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:top}
-tr:last-child td{border-bottom:0}
-tbody tr:hover{background:var(--bg-hover)}
-code,.code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);color:var(--code-text);border-radius:4px;padding:2px 6px;font-size:.88em}
-.code{cursor:pointer;white-space:nowrap;border:0}
-.code:hover{filter:brightness(.92)}
-.code.ok{background:#2eaadc;color:#fff}
-details{border-radius:6px;margin:6px 0}
-details>summary{cursor:pointer;list-style:none;padding:6px 8px;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:8px}
-details>summary::-webkit-details-marker{display:none}
-details>summary::before{content:"▸";color:var(--muted);transition:transform .12s;display:inline-block;width:14px}
-details[open]>summary::before{transform:rotate(90deg)}
-details>summary:hover{background:var(--bg-hover)}
-details .body{padding:4px 10px 10px 30px}
-.steps{padding-left:0;list-style:none;counter-reset:s;margin:6px 0}
-.steps li{counter-increment:s;display:flex;gap:10px;padding:5px 0;align-items:flex-start}
-.steps li::before{content:counter(s);flex:none;width:22px;height:22px;border-radius:50%;background:var(--code-bg);font-size:12px;display:grid;place-items:center;margin-top:2px}
-.check{display:flex;gap:10px;align-items:flex-start;padding:4px 0}
-.check input{margin-top:6px;width:16px;height:16px;accent-color:#2383e2}
-.check input:checked+span{color:var(--muted);text-decoration:line-through}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-.hidden{display:none!important}
-.empty{color:var(--muted);padding:14px;text-align:center}
-.menu-btn{display:none}
-@media (max-width:860px){
-  aside{position:fixed;z-index:20;left:-270px;transition:left .15s;box-shadow:0 0 20px rgba(0,0,0,.2)}
-  aside.open{left:0}
-  .menu-btn{display:inline-block}
-  .page{padding:0 16px 100px}
-  h1{font-size:30px}
-  .two{grid-template-columns:1fr}
-}
-@media print{aside,.topbar,.menu-btn{display:none}.page{padding:0}details{display:block}details>.body{display:block}}
-
-.pbox{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0}
-.pbox .search{width:100%;font-size:16px;padding:12px 14px}
-.pmeta{font-size:13px;color:var(--muted);margin:6px 0}
-.prod{display:flex;gap:12px;align-items:center;padding:9px 10px;border-bottom:1px solid var(--border);cursor:pointer;border-radius:6px}
-.prod:hover,.prod:active{background:var(--bg-hover)}
-.prod .code{font-size:15px;flex:none;min-width:64px;text-align:center}
-.prod .nm{flex:1;min-width:0;word-break:break-word}
-.prod mark{background:var(--yellow);color:var(--yellow-t);border-radius:2px;padding:0 1px}
-.prod.ok .code{background:#2eaadc;color:#fff}
-.pmore{margin:10px 0}
-
-details.bigsec{margin:44px 0 6px}
-details.bigsec>summary{font-size:26px;font-weight:600;border-bottom:1px solid var(--border);border-radius:0;padding:0 0 6px}
-details.bigsec>summary::before{width:22px;font-size:20px}
-details.bigsec .body{padding:8px 0 0}
-</style>
+<link rel="stylesheet" href="ocorr.css">
+<link rel="stylesheet" href="paginas.css">
 </head>
 <body>
-<div class="layout">
-<aside id="side">
-  <div class="ws"><span class="logo">C</span> Conferente</div>
-  <div class="label">Navegação</div>
-  <a href="#inicio">🏠 Início</a>
-  <a href="ocorrencias.html">📨 Ocorrências</a>
-  <a href="#produtos">🔎 Produtos (código)</a>
-  <a href="#rotinas">🗂️ Todas as rotinas</a>
-  <div class="label">Fluxos do dia</div>
-  <a href="#retorno">🔄 Retorno de rota</a>
-  <a href="#puxada">🚚 Puxada / Empurrada</a>
-  <a href="#carregamento">📦 Carregamento</a>
-  <a href="#controle">🏷️ Controle</a>
-  <div class="label">Passo a passo</div>
-  <a href="#proc-placa">🪪 Cadastro de placa</a>
-  <a href="#proc-nf">🧾 Gerar NF manual</a>
-  <a href="#proc-quebra">✂️ Quebrar mapa</a>
-  <a href="#proc-wms">🏭 Liberar mapa no WMS</a>
-  <a href="#proc-tp">🧹 Desassociar / limpar TP</a>
-  <a href="#proc-prior">📊 Planilha de priorização</a>
-  <a href="#proc-matriz">🧠 Matriz de habilidade</a>
-  <a href="#proc-sap">💼 SAP – carretas</a>
-  <div class="label">Referências</div>
-  <a href="#fabricas">🏭 Fábricas (centro)</a>
-  <a href="#chamados">🎫 Chamados (CID)</a>
-  <a href="#check">✅ Checklist do turno</a>
-</aside>
-
-<main>
-<div class="cover"></div>
-<div class="page">
-  <div class="icon" id="inicio">📋</div>
+<div class="wrap">
+  <div class="ico">📋</div>
   <h1>Rotinas do Conferente</h1>
-  <p class="sub">Ambev · Guia rápido de rotinas, procedimentos e chamados</p>
-
-  <div class="topbar">
-    <button class="btn menu-btn" onclick="document.getElementById('side').classList.toggle('open')">☰ Menu</button>
-    <input id="q" class="search" type="search" placeholder="🔎 Buscar rotina, código ou assunto (ex.: placa, 03.11.10, NF)…">
-    <button class="btn" id="theme">🌓 Tema</button>
-    <button class="btn" onclick="window.print()">🖨️ Imprimir</button>
+  <p class="sub">Ambev · Escolha uma opção</p>
+  <div class="sec">Fluxos do dia</div>
+  <div class="menu cols">
+    <a class="item" href="retorno.html">
+      <span class="e">🔄</span>
+      <div><b>Retorno de rota</b><span>Prestação de contas, painéis, refugo</span></div>
+      <span class="go">›</span>
+    </a>
+    <a class="item" href="puxada.html">
+      <span class="e">🚚</span>
+      <div><b>Puxada / Empurrada</b><span>Placa, OP, mapas e NF</span></div>
+      <span class="go">›</span>
+    </a>
+    <a class="item" href="carregamento.html">
+      <span class="e">📦</span>
+      <div><b>Carregamento</b><span>Blitz, reposição, produtividade</span></div>
+      <span class="go">›</span>
+    </a>
+    <a class="item" href="controle.html">
+      <span class="e">🏷️</span>
+      <div><b>Controle</b><span>Etiquetas, PCF e mapa negativo</span></div>
+      <span class="go">›</span>
+    </a>
   </div>
-
-  <div class="callout blue"><span class="ci">💡</span><p>Clique em qualquer código de rotina (ex.: <code>03.11.10</code>) para copiá-lo. Use a busca acima para filtrar as rotinas e os procedimentos.</p></div>
-
-  <div class="cards">
-    <a class="card" href="ocorrencias.html"><div class="e">📨</div><b>Ocorrências</b><span>Abrir chamado e cadastro de fábricas</span></a>
-    <a class="card" href="#produtos"><div class="e">🔎</div><b>Produtos</b><span>Buscar código ou nome do item</span></a>
-    <a class="card" href="#retorno"><div class="e">🔄</div><b>Retorno de rota</b><span>Prestação de contas, painéis, refugo</span></a>
-    <a class="card" href="#puxada"><div class="e">🚚</div><b>Puxada / Empurrada</b><span>Placa, OP, mapas, NF</span></a>
-    <a class="card" href="#carregamento"><div class="e">📦</div><b>Carregamento</b><span>Blitz, reposição, produtividade</span></a>
-    <a class="card" href="#controle"><div class="e">🏷️</div><b>Controle</b><span>Etiquetas, PCF, mapa negativo</span></a>
+  <div class="sec">Consultas</div>
+  <div class="menu cols">
+    <a class="item" href="produtos.html">
+      <span class="e">🔎</span>
+      <div><b>Produtos</b><span>Buscar código ou nome do item</span></div>
+      <span class="go">›</span>
+    </a>
+    <a class="item" href="rotinas.html">
+      <span class="e">🗂️</span>
+      <div><b>Todas as rotinas</b><span>Buscar qualquer código de rotina</span></div>
+      <span class="go">›</span>
+    </a>
+    <a class="item" href="procedimentos.html">
+      <span class="e">📝</span>
+      <div><b>Passo a passo</b><span>Placa, NF manual, quebrar mapa, WMS, SAP</span></div>
+      <span class="go">›</span>
+    </a>
+    <a class="item" href="referencias.html">
+      <span class="e">📚</span>
+      <div><b>Referências</b><span>Centros das fábricas e chamados STI</span></div>
+      <span class="go">›</span>
+    </a>
   </div>
-
-  <details id="produtos" class="bigsec">
-  <summary>🔎 Produtos (código Promax)</summary>
-  <div class="body">
-  <p class="sub">Digite o <b>código</b> para ver o nome, ou o <b>nome</b> (ou parte dele) para achar o código. Toque na linha para copiar o código.</p>
-  <div class="pbox"><input id="pq" class="search" type="search" inputmode="search" autocomplete="off" placeholder="Ex.: 2538  ·  pilsen 600  ·  guarana 2l"></div>
-  <div class="pmeta" id="pmeta"></div>
-  <div id="plist"></div>
-  <button class="btn pmore hidden" id="pmore">Mostrar mais</button>
+  <div class="sec">Dia a dia</div>
+  <div class="menu cols">
+    <a class="item" href="ocorrencias.html">
+      <span class="e">📨</span>
+      <div><b>Ocorrências</b><span>Abrir chamado e cadastro de fábricas</span></div>
+      <span class="go">›</span>
+    </a>
+    <a class="item" href="checklist.html">
+      <span class="e">✅</span>
+      <div><b>Checklist do turno</b><span>Marque o que já foi feito</span></div>
+      <span class="go">›</span>
+    </a>
   </div>
-  </details>
-
-  <h2 id="rotinas">🗂️ Todas as rotinas</h2>
-  <p class="sub">Banco de dados unificado: uma rotina que aparece em mais de um fluxo foi consolidada em uma linha só.</p>
-  <div class="topbar">
-    <button class="btn fil on" data-f="">Todas</button>
-    <button class="btn fil" data-f="Retorno">🔄 Retorno</button>
-    <button class="btn fil" data-f="Puxada">🚚 Puxada</button>
-    <button class="btn fil" data-f="Carregamento">📦 Carregamento</button>
-    <button class="btn fil" data-f="Controle">🏷️ Controle</button>
-    <button class="btn fil" data-f="Procedimento">📝 Procedimento</button>
-  </div>
-  <div class="tablewrap"><table>
-    <thead><tr><th>Código</th><th>Rotina</th><th>Para que serve</th><th>Fluxos</th></tr></thead>
-    <tbody id="tb"></tbody>
-  </table></div>
-  <div class="empty hidden" id="none">Nenhuma rotina encontrada.</div>
-
-  <h2 id="retorno">🔄 Retorno de rota</h2>
-  <div class="two"><div>
-    <h3>Ordem sugerida</h3>
-    <ol class="steps">
-      <li><span>Confirmar o status do veículo em <span class="code" data-c="03.11.10">03.11.10</span></span></li>
-      <li><span>Conferir pendências do mapa/placa em <span class="code" data-c="03.03.44.01">03.03.44.01</span></span></li>
-      <li><span>Acompanhar etapas no painel <span class="code" data-c="03.11.20">03.11.20</span> ou <span class="code" data-c="02.01.16">02.01.16</span></span></li>
-      <li><span>Fazer a prestação de contas em <span class="code" data-c="03.03.02">03.03.02</span></span></li>
-      <li><span>Lançar/verificar refugo (<span class="code" data-c="03.11.34.01">03.11.34.01</span> e <span class="code" data-c="03.11.34.07">03.11.34.07</span>)</span></li>
-    </ol>
-  </div><div>
-    <div class="callout yellow"><span class="ci">⚠️</span><p><b>Atenção</b><br>Boleto fica em <code>03.02.06</code> e protocolo de vales em <code>02.12.03.01</code>. Confira os dois antes de encerrar o retorno.</p></div>
-  </div></div>
-
-  <h2 id="puxada">🚚 Puxada / Empurrada</h2>
-  <div class="callout red"><span class="ci">🪪</span><p><b>Cadastro de placa (<code>01.04.01</code>)</b>: abra duas telas da mesma rotina, informe a placa na segunda, exclua a primeira (opção "idem") e preencha tudo na segunda. Isso evita o bloqueio de que só o GOD altera a transportadora. Município: <code>00009668-SP</code>. Passo a passo completo em <a href="#proc-placa">Cadastro de placa</a>.</p></div>
-  <ol class="steps">
-    <li><span>Cadastrar a placa (<span class="code" data-c="01.04.01">01.04.01</span>) e acompanhar a fase da OP/placa (<span class="code" data-c="03.11.20">03.11.20</span>)</span></li>
-    <li><span>Gerar pedidos/NF (<span class="code" data-c="03.11.07.02">03.11.07.02</span>) e, se preciso, NF manual (<span class="code" data-c="03.01.04">03.01.04</span>)</span></li>
-    <li><span>Juntar OPs (<span class="code" data-c="03.11.07.11">03.11.07.11</span>) ou desvincular mapas e OPs (<span class="code" data-c="03.11.07.10">03.11.07.10</span>)</span></li>
-    <li><span>Informar o carregamento (<span class="code" data-c="03.11.01">03.11.01</span>)</span></li>
-    <li><span>Acompanhar placas em trânsito (<span class="code" data-c="03.11.23">03.11.23</span>) e a situação dos mapas (<span class="code" data-c="03.03.12">03.03.12</span>)</span></li>
-  </ol>
-
-  <h2 id="carregamento">📦 Carregamento</h2>
-  <ol class="steps">
-    <li><span>Atualização diária (<span class="code" data-c="03.04.29.04">03.04.29.04</span>) e exportar mapas (<span class="code" data-c="03.02.36.08">03.02.36.08</span>)</span></li>
-    <li><span>Conferir quantidade de mapas e carros no PCD (<span class="code" data-c="03.11.49.02">03.11.49.02</span>)</span></li>
-    <li><span>Trocar equipe/veículo se necessário (<span class="code" data-c="03.03.03">03.03.03</span> / <span class="code" data-c="03.11.11">03.11.11</span>) e placa no WMS (<span class="code" data-c="03.11.46">03.11.46</span>)</span></li>
-    <li><span>Blitz de carregamento (<span class="code" data-c="03.11.35.02">03.11.35.02</span>) e reposição (<span class="code" data-c="03.18.03">03.18.03</span>)</span></li>
-    <li><span>No dia seguinte, analisar volume/produtividade D+1 (<span class="code" data-c="03.01.47.03">03.01.47.03</span>)</span></li>
-  </ol>
-  <div class="callout"><span class="ci">📝</span><p>Rodshow: <code>03.02.33</code>. Ao gerar NF manual de remessa de vasilhame, <b>não enviar para o Rodshow</b>.</p></div>
-
-  <h2 id="controle">🏷️ Controle</h2>
-  <ul>
-    <li>Consulta de etiqueta: <span class="code" data-c="02.08.05">02.08.05</span></li>
-    <li>Cadastro de etiqueta/matéria · crédito manual de SOPI: <span class="code" data-c="02.08.10">02.08.10</span></li>
-    <li>PCF de mapas em aberto: consulta de NF por clientes em <span class="code" data-c="03.02.15">03.02.15</span> (mapa negativo)</li>
-  </ul>
-
-  <h2>📝 Procedimentos passo a passo</h2>
-
-  <details id="proc-placa" data-s="cadastro placa carreta veiculo 01.14.01 01.04.01 transportadora perfil"><summary>🪪 Cadastro de placa (carreta) · <span class="code" data-c="01.14.01">01.14.01</span></summary>
-  <div class="body"><ol class="steps">
-    <li><span>Consultar o número do veículo em <code>03.11.10</code></span></li>
-    <li><span>Preencher: marca do veículo · veículo <b>Carreta</b> · município <b>SP – 00009668</b> · EDI <b>1</b> · RENAVAM <b>1</b> · UF <b>SP</b> · tipo <b>F – Fixo</b></span></li>
-    <li><span>Transportadora: <b>verificar</b> qual é a correta</span></li>
-    <li><span>Vincular perfil: <b>Carreta 101</b></span></li>
-    <li><span>Abrir uma <b>segunda tela</b> da mesma rotina, informar a placa e deixar as duas abertas</span></li>
-    <li><span>Excluir a primeira (com tudo preenchido), preencher novamente na segunda tela e <b>salvar</b></span></li>
-  </ol></div></details>
-
-  <details id="proc-nf" data-s="nf manual simples remessa vasilhame caderninho setor 999 vendedor 9 03.01.04"><summary>🧾 Gerar NF manual · <span class="code" data-c="03.01.04">03.01.04</span></summary>
-  <div class="body"><ol class="steps">
-    <li><span>Abrir o <b>caderninho do mapa</b></span></li>
-    <li><span>Setor <b>999</b> (se estiver bloqueado, pedir liberação) · tipo <b>Simples remessa</b></span></li>
-    <li><span>Vendedor <b>9</b> – remessa de vasilhame</span></li>
-    <li><span>Itens: código do AG + quantidade e clicar no caderninho para lançar</span></li>
-    <li><span>Salvar lista · <b>não enviar para Rodshow</b> · confirmar</span></li>
-  </ol></div></details>
-
-  <details id="proc-quebra" data-s="quebrar mapa 03.03.11 transferencia nota"><summary>✂️ Quebrar mapa · <span class="code" data-c="03.03.11">03.03.11</span></summary>
-  <div class="body"><ol class="steps">
-    <li><span>Informar o <b>mapa atual</b> e a <b>nota que vai retirar</b> (TAB, TAB)</span></li>
-    <li><span>Anotar o mapa de transferência do que será retirado e o <b>novo mapa</b></span></li>
-    <li><span>Se houver mais de uma nota para retirar, informar o mapa novo em cada uma (TAB)</span></li>
-    <li><span>Inserir o mapa antigo de transferência e clicar em <b>Transferir</b></span></li>
-  </ol></div></details>
-
-  <details id="proc-wms" data-s="liberar mapa wms saldo estoque ressuprimento picking app contagem manual"><summary>🏭 Liberação de mapas no WMS</summary>
-  <div class="body">
-    <p>Para mapa <b>com ou sem saldo</b> de estoque (ressuprimento: picking, armazenagem etc.). Pode ser feito pelo app, <b>um mapa por vez</b>.</p>
-    <ol class="steps">
-      <li><span>Separação</span></li><li><span>Cargas</span></li><li><span>Liberação de documentos</span></li>
-      <li><span>Selecionar mapa e box</span></li><li><span>Liberar mapa</span></li>
-    </ol>
-    <div class="callout yellow"><span class="ci">⚠️</span><p>Se pedir item que já está na posição, faça <b>contagem manual</b> do item. Se o item existe no picking mas pede ajuste, gere contagem manual para criar a tarefa de contagem no local e gerar saldo.</p></div>
-  </div></details>
-
-  <details id="proc-tp" data-s="wms desassociar tp limpar ajuste fisico excluir"><summary>🧹 WMS – desassociar ou limpar TP</summary>
-  <div class="body"><ol class="steps">
-    <li><span>Ir em <b>Ajuste físico</b></span></li>
-    <li><span>Localizar o TP (ex.: TP01)</span></li>
-    <li><span>Clicar em <b>Excluir</b></span></li>
-  </ol></div></details>
-
-  <details id="proc-prior" data-s="planilha priorizacao pcd csv colunas"><summary>📊 Planilha de priorização (PCD)</summary>
-  <div class="body"><ol class="steps">
-    <li><span>Salvar o PCD como <code>PCD.csv</code> (qualquer pasta)</span></li>
-    <li><span>Na planilha, apagar da coluna <b>B até AN2</b></span></li>
-    <li><span>Copiar o PCD e colar a partir da coluna <b>B</b></span></li>
-  </ol></div></details>
-
-  <details id="proc-matriz" data-s="matriz habilidade task interleaving priorizacao operador funcionario novo"><summary>🧠 Priorização de carregamento do operador (WMS)</summary>
-  <div class="body"><ol class="steps">
-    <li><span>WMS → <b>Task Interleaving</b> → <b>Matriz de habilidade</b></span></li>
-    <li><span>Funcionário novo: <b>Nova matriz</b>. Existente: pesquisar o usuário pelo nome</span></li>
-    <li><span>Abrir <b>Habilidade</b>: a sequência da aba direita é a prioridade, de cima para baixo</span></li>
-    <li><span>Para alterar, clicar em <b>Ações</b> (lápis)</span></li>
-  </ol></div></details>
-
-  <details id="proc-sap" data-s="sap zc_ra33 zv_r0051 carretas pca csv centro atribuicao"><summary>💼 SAP – informações das carretas</summary>
-  <div class="body"><ol class="steps">
-    <li><span>Transação <code>ZC_RA33</code> (consultar a placa) e depois <code>ZV_R0051</code></span></li>
-    <li><span>Centro: <b>260</b> · Atribuição: <b>970</b></span></li>
-    <li><span>Salvar como <code>Zcra.csv</code> e usar para puxar as informações das carretas no PCA</span></li>
-  </ol>
-  <div class="callout green"><span class="ci">🔐</span><p>Acessos (Telnet, Wi-Fi, logins) foram propositalmente deixados de fora desta página. Guarde-os em um gerenciador de senhas.</p></div></div></details>
-
-  <h2 id="fabricas">🏭 Fábricas (centro)</h2>
-  <div class="tablewrap"><table>
-    <thead><tr><th>Centro</th><th>Unidade</th></tr></thead>
-    <tbody>
-      <tr><td><span class="code" data-c="260">260</span></td><td>Jacareí</td></tr>
-      <tr><td><span class="code" data-c="891">891</span></td><td>Guarulhos</td></tr>
-      <tr><td><span class="code" data-c="952">952</span></td><td>Jaguariúna</td></tr>
-      <tr><td><span class="code" data-c="424">424</span></td><td>Louveira</td></tr>
-      <tr><td><span class="code" data-c="324">324</span></td><td>Extrema</td></tr>
-    </tbody>
-  </table></div>
-
-  <h2 id="chamados">🎫 Chamados (CID / Atendimento Ambev)</h2>
-  <p>Canais: app <b>Atendimento Ambev</b> (Play Store) ou ferramenta de chamados <b>CID</b> (mesmo sistema do Promax). Abra pela oferta correta:</p>
-  <div class="callout red"><span class="ci">🚨</span><p><b>Cancelamento ou exclusão de mapa</b> exige obrigatoriamente as ofertas <code>STI12783</code> (cancelamento) e <code>STI12784</code> (exclusão).</p></div>
-  <div class="tablewrap"><table>
-    <thead><tr><th>Assunto</th><th>Oferta</th><th>Código</th></tr></thead>
-    <tbody>
-      <tr><td>Wi-Fi</td><td>Problema/Indisponibilidade Wi-Fi Armazém</td><td><span class="code" data-c="STI11868">STI11868</span></td></tr>
-      <tr><td>Cadastros</td><td>WMS 2nd Tier – Cadastro de Item</td><td><span class="code" data-c="STI12779">STI12779</span></td></tr>
-      <tr><td>Cadastros</td><td>WMS 2nd Tier – Cadastro de Usuário</td><td><span class="code" data-c="STI12780">STI12780</span></td></tr>
-      <tr><td>Cadastros</td><td>WMS 2nd Tier – Cadastro de Endereço</td><td><span class="code" data-c="STI12781">STI12781</span></td></tr>
-      <tr><td>Cadastros</td><td>WMS 2nd Tier – Cadastro de Região</td><td><span class="code" data-c="STI12782">STI12782</span></td></tr>
-      <tr><td>Mapas</td><td>WMS 2nd Tier – Cancelamento de Mapa</td><td><span class="code" data-c="STI12783">STI12783</span></td></tr>
-      <tr><td>Mapas</td><td>WMS 2nd Tier – Exclusão de Mapa</td><td><span class="code" data-c="STI12784">STI12784</span></td></tr>
-      <tr><td>App/Mapas</td><td>WMS 2nd Tier – Instalação/Configuração App</td><td><span class="code" data-c="STI12787">STI12787</span></td></tr>
-      <tr><td>App/Mapas</td><td>WMS 2nd Tier – Liberação de Mapas</td><td><span class="code" data-c="STI12788">STI12788</span></td></tr>
-      <tr><td>App/Mapas</td><td>WMS 2nd Tier – Regra Montagem – Novo OCP</td><td><span class="code" data-c="STI12789">STI12789</span></td></tr>
-      <tr><td>Geral WMS</td><td>WMS 2nd Tier – Solicitações</td><td><span class="code" data-c="STI12173">STI12173</span></td></tr>
-      <tr><td>Geral WMS</td><td>WMS 2nd Tier – Dúvida</td><td><span class="code" data-c="STI12177">STI12177</span></td></tr>
-      <tr><td>Geral WMS</td><td>WMS 2nd Tier – Lentidão</td><td><span class="code" data-c="STI12181">STI12181</span></td></tr>
-      <tr><td>Geral WMS</td><td>WMS 2nd Tier – Indisponibilidade</td><td><span class="code" data-c="STI12786">STI12786</span></td></tr>
-      <tr><td>Geral WMS</td><td>WMS 2nd Tier – Erros/Problemas</td><td><span class="code" data-c="STI12785">STI12785</span></td></tr>
-    </tbody>
-  </table></div>
-
-  <h2 id="check">✅ Checklist do turno</h2>
-  <p class="sub">Marcações ficam salvas neste navegador.</p>
-  <div id="checks"></div>
-  <button class="btn" id="reset" style="margin-top:10px">Limpar checklist</button>
 </div>
-</main>
-</div>
-
-<script>
-const R=[
-["03.03.02","Prestação de contas","Fechar a prestação de contas do retorno","Retorno"],
-["03.03.44.01","Status do mapa/placa","Ver o que enviar ao WMS e se há pendência de processo","Retorno"],
-["02.01.16","Painel de processos do WMS","Acompanhar processos do WMS (mapa/OP)","Retorno"],
-["03.11.20","Painel de etapas do mapa/OP","Acompanhar fase da OP/placa e exportar informações","Retorno,Puxada"],
-["03.11.09","Carga montada","Consultar cargas montadas","Retorno"],
-["03.11.01","Informar carregamento","Informar o carregamento do mapa/OP","Retorno,Puxada"],
-["03.11.34.01","Blitz de refugo","Blitz de refugo","Retorno"],
-["03.11.34.07","Informativo de refugo","Refugos lançados e sorteados","Retorno"],
-["03.11.10","Status do veículo","Liberado, pré-cadastro, trânsito… e número do veículo","Retorno,Puxada,Carregamento,Procedimento"],
-["02.12.03.01","Protocolo de vales gerados","Consultar protocolo de vales","Retorno"],
-["03.11.11","Alteração de equipe","Trocar a equipe","Retorno,Carregamento"],
-["03.02.06","Boleto","Consulta/emissão de boleto","Retorno"],
-["01.04.01","Cadastro de placa","Cadastrar placa (usar o truque das duas telas)","Puxada,Procedimento"],
-["03.11.07.11","Junção de OP","Juntar OPs","Puxada"],
-["03.03.12","Situação de mapas","Ver situação dos mapas","Puxada"],
-["03.11.23","Placas em trânsito","Acompanhar placas em trânsito","Puxada"],
-["03.03.13","Consulta de NF do mapa","Notas do mapa","Puxada"],
-["03.11.07.09","Relatório da situação das OPs","Situação das OPs","Puxada"],
-["03.11.07.10","Desvincular mapas e OPs","Desvincular mapas e OPs","Puxada"],
-["03.11.13","Substituição de veículos","Trocar o veículo da carga","Puxada"],
-["03.11.07.02","Geração de pedidos/NF","Gerar pedidos e NF","Puxada"],
-["03.01.04","Gerar NF manual","Simples remessa / vasilhame","Puxada,Procedimento"],
-["03.04.29.04","Atualização diária","Atualização diária do carregamento","Carregamento"],
-["03.02.15","Consulta de cliente e notas","Consulta de NF por cliente; PCF de mapa negativo","Carregamento,Controle"],
-["03.02.36.08","Exportar mapas","Exportar mapas","Carregamento"],
-["03.11.46","Substituição de placas no WMS","Trocar placa no WMS","Carregamento"],
-["03.03.03","Alteração de equipe/veículo","Alterar equipe ou veículo","Carregamento"],
-["03.11.35.02","Blitz de carregamento","Blitz de carregamento","Carregamento"],
-["03.18.03","Reposição","Reposição","Carregamento"],
-["03.11.49.02","PCD – mapas e carros","Quantidade de mapas e carros","Carregamento"],
-["03.01.47.03","Volume / produtividade D+1","Análise de produtividade do dia anterior","Carregamento"],
-["03.02.33","Rodshow","Rodshow","Carregamento"],
-["02.08.05","Consulta de etiqueta","Consultar etiqueta","Controle"],
-["02.08.10","Cadastro de etiqueta/matéria","Crédito manual de SOPI","Controle"],
-["01.14.01","Cadastro de placa (carreta)","Cadastro específico de carreta","Procedimento"],
-["03.01.47.01","CDP","Quebra 1 geral → visualizar → CSV; filtrar por cliente, produto, PDV","Procedimento"],
-["03.03.11","Quebrar mapa","Transferir nota para novo mapa","Procedimento"]
-];
-const cls={Retorno:"t-retorno",Puxada:"t-puxada",Carregamento:"t-carreg",Controle:"t-controle",Procedimento:"t-proc"};
-const tb=document.getElementById("tb");
-tb.innerHTML=R.map(r=>`<tr data-f="${r[3]}" data-s="${(r[0]+' '+r[1]+' '+r[2]).toLowerCase()}">
-<td><span class="code" data-c="${r[0]}">${r[0]}</span></td><td><b>${r[1]}</b></td><td>${r[2]}</td>
-<td>${r[3].split(",").map(t=>`<span class="tag ${cls[t]}">${t}</span>`).join("")}</td></tr>`).join("");
-
-let filtro="";
-function aplicar(){
-  const q=document.getElementById("q").value.trim().toLowerCase();
-  let n=0;
-  tb.querySelectorAll("tr").forEach(tr=>{
-    const ok=(!filtro||tr.dataset.f.split(",").includes(filtro))&&(!q||tr.dataset.s.includes(q));
-    tr.classList.toggle("hidden",!ok); if(ok)n++;
-  });
-  document.getElementById("none").classList.toggle("hidden",n>0);
-  document.querySelectorAll("details[data-s]").forEach(d=>{
-    const hit=q&&d.dataset.s.includes(q);
-    d.classList.toggle("hidden",!!q&&!hit);
-    if(hit)d.open=true;
-  });
-}
-document.getElementById("q").addEventListener("input",aplicar);
-document.querySelectorAll(".fil").forEach(b=>b.addEventListener("click",()=>{
-  document.querySelectorAll(".fil").forEach(x=>x.classList.remove("on"));
-  b.classList.add("on");b.style.fontWeight="600";
-  document.querySelectorAll(".fil:not(.on)").forEach(x=>x.style.fontWeight="");
-  filtro=b.dataset.f;aplicar();
-}));
-
-document.addEventListener("click",e=>{
-  const c=e.target.closest(".code[data-c]");
-  if(!c)return;
-  const t=c.dataset.c;
-  const done=()=>{const old=c.textContent;c.classList.add("ok");c.textContent="copiado!";setTimeout(()=>{c.classList.remove("ok");c.textContent=old},900)};
-  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,done)}else done();
-});
-
-
-const P=[["25174","51 ICE BALADA GFA VD 275ML CX24"],["25178","51 ICE LIMAO GFA VD 275ML CX24"],["25176","51 ICEFRUIT MIX GFA VD 275ML CX24"],["21529","ABSOLUT ORIGINAL GFA VIDRO 1L"],["22564","ABSOLUT ORIGINAL GFA VIDRO 750ML"],["24613","ACQUA PANNA S/G GARRAFA VD 505 ML CX 24"],["23463","AG MIN S GAS AMA PET 500ML C12 N SHAPE"],["33651","AGUA AMA + SAIS S/GAS LT SL 350ML SH C12"],["21073","AGUA M C/GAS AMA LT SLEEK 350ML SH C12NP"],["21391","ÁGUA MINERAL S/ GÁS AMA PET 1,5L CX 6 NP"],["34788","AGUA NA CAIXA AGUA MIN S G TP 500ML CX12"],["32543","ALECRIM VINHO TINTO PORTUGAL GFA VD750ML"],["32126","AMINDUS GRE AME TOR S/PELE PCT 24G FD/60"],["34274","ANA MARIA CHOCOLATE PCT 35G DISPLAY C17"],["34239","ANA MARIA GOTAS CHOCOLATE PC 35G DISP 17"],["2532","ANTARCTICA PILSEN 300ML"],["2538","ANTARCTICA PILSEN 600ML"],["1743","ANTARCTICA PILSEN GFA VD 1L C/TTC"],["9067","ANTARCTICA PILSEN LATA 350ML SH C/12 NPA"],["17725","ANTARCTICA PILSEN LT 350ML SH C/18 MULTP"],["9224","ANTARCTICA PILSEN LT269ML SH TR C/15NPAL"],["11503","ANTARCTICA SUBZERO LT 269ML SH C/15 NPAL"],["2008","ANTARCTICA SUBZERO LT 350ML SH C/12 NPAL"],["10175","ANTARCTICA SUBZERO LT 473ML SH C/12 NPAL"],["22675","BALALAIKA VODKA GFA VD 1L CX C/6"],["27574","BALLANTINES BOURBON BARREL GFA 750ML"],["21788","BALLANTINES FINEST 1L GFA VIDRO 1L"],["36283","BALLENA CREME CHOC CARAM TEQUIL GF 750ML"],["36281","BALLENA CREME COCO C TEQUILA GFA V 750ML"],["36280","BALLENA CREME MOR C TEQUILA GFA VD 750ML"],["35030","BALLSUN GAFAVD700ML"],["35623","BEATS GREEN MIX LONG NECK 269ML SP SH C2"],["35620","BEATS GREEN MIX LONG NECK 269ML SP SH C4"],["35617","BEATS GREEN MIX LT 269ML SH C/8"],["33738","BEATS RED MIX LN 269ML SIX PACK SH C/2"],["33734","BEATS RED MIX LT 269ML SH C/8"],["32361","BEATS TROPICAL LN 269ML SIX-PACK SH C/4"],["32349","BEATS TROPICAL LT 269ML CX CARTAO C/8 NP"],["20531","BECKS N 600ML"],["20072","BECKS N LT SLEEK 350ML C 8 CX CART"],["20537","BECKS N ONE WAY 600ML CX 12"],["17757","BECKS NACIONAL LN 330ML SIX PACK SH C 4"],["14724","BECKS OW 4X6 275 EXP TRA INT"],["27795","BEEFEATER GIN BOT LEMON GINGER GFA 750ML"],["21886","BEEFEATER LONDON DRY GFA VD 750ML"],["16480","BOHEMIA 300ML"],["10537","BOHEMIA GFA VD 990ML"],["22819","BOHEMIA LATA 310ML CX C/6 MULTPACK"],["22789","BOHEMIA LATA 310ML SH C 15 NPAL MULTPACK"],["20161","BOHEMIA LATA 350ML SH C/18 MULTIPACK"],["19266","BOHEMIA LT 269ML SH C/15"],["17266","BOHEMIA LT473ML PACK SHRINK C/12"],["9072","BOHEMIA NOVA EMBAL LT 350ML SH C/12 NPAL"],["3733","BOHEMIA NOVA EMBALAGEM 600ML"],["19849","BOHEMIA PURO MALTE LT SLEEK 350ML SH C12"],["20128","BOHEMIA_ OW 600ML CX C12"],["978","BRAHMA CHOPP 300ML"],["988","BRAHMA CHOPP 600ML"],["1695","BRAHMA CHOPP GFA VD 1L COM TTC"],["17797","BRAHMA CHOPP LATA 350ML SH 18 MULTIPACK"],["9069","BRAHMA CHOPP LATA 350ML SH C/12 NPAL"],["11108","BRAHMA CHOPP LATA 550ML SHRINK C/12"],["279","BRAHMA CHOPP LN355ML SIX PACK CAIXA C/4"],["1898","BRAHMA CHOPP LT 269ML SH C/15 NPAL"],["9320","BRAHMA CHOPP LT 473ML SH C/12 NPAL"],["12948","BRAHMA CHOPP ZERO LATA 350 SH CX C12 NPA"],["31075","BRAHMA D MALTE ESCURA LT SLEK 350ML SH12"],["26754","BRAHMA DUPLO MALTE 300ML"],["20329","BRAHMA DUPLO MALTE 600ML"],["20533","BRAHMA DUPLO MALTE GFA VD 1L"],["20647","BRAHMA DUPLO MALTE LT 269ML SH C15 NPAL"],["22815","BRAHMA DUPLO MALTE LT 310ML CX C6 MULTPACK"],["21767","BRAHMA DUPLO MALTE LT 310ML SH C/15 MULT"],["20498","BRAHMA DUPLO MALTE LT SLEEK 350ML SH C12"],["21275","BRAHMA DUPLO MALTE ONE WAY 600ML CX 12"],["14117","BRAHMA EXTRA LAGER LN 355ML SP SH C/4"],["14123","BRAHMA EXTRA RED LAGER LN 355MLSP SH C/4"],["14120","BRAHMA EXTRA WEISS LN 355ML SP SH C/4"],["31051","BRAHMA LEX CLARA LT SLEEK 350ML SH C12"],["30103","BRAHMA LEX LT SLEEK 350ML SH C 12"],["31795","BRUTAL FRUIT LONG NECK 275ML SP SH C2"],["32648","BUBBALOO MORANGO DISPLAY 5G CX/60"],["32646","BUBBALOO TUTTI FRUTTI DISPLAY 5G CX/60"],["32644","BUBBALOO UVA DISPLAY 5G CX/60"],["2548","BUDWEISER 600ML"],["22841","BUDWEISER BIB 6L NPAL"],["35331","BUDWEISER GFA VD 1L"],["29700","BUDWEISER GFA VD 300ML RGB"],["13307","BUDWEISER GFA VD 990ML CX C/12"],["13839","BUDWEISER LATA 269ML CX C/8 FRIDGE PACK"],["22813","BUDWEISER LATA 310ML CX C/6 MULTPACK"],["34137","BUDWEISER LT 269ML SH C 15 MULTIPACK"],["19158","BUDWEISER LT 410ML CX CARTAO C/12"],["14135","BUDWEISER LT 473ML SIX-PACK SH C/2 NPAL"],["21020","BUDWEISER LT SLEEK 350ML CX CART C12"],["17810","BUDWEISER ONE WAY 550ML CX C 12"],["17808","BUDWEISER OW 330ML CX C 24"],["22180","BUDWEISER ZERO LN 330ML SIX-PACK SH C/4"],["22177","BUDWEISER ZERO LT SLEEK 350ML C8 CX CART"],["25220","CACHACA 51 PIRAS OURO C VASIL GFVD 965ML"],["27522","CACHACA 51 PIRAS. GF VD 965ML RET CX/12"],["29230","CADEIRA MAD DOBR ANTARCTICA ORG 1UN PCK4"],["9071","CARACU LATA 350ML SH C/12 NPAL"],["27613","CASIL DEL DIABLO VNH RSV CBSVG GFVD750ML"],["27635","CASILL DEL DIABL VHN RSRV CRMN GFVD750ML"],["36454","CERESER FRUTAS VERMELHAS GFA VD 660ML"],["36455","CERESER MACA VERDE GFA VD 660ML"],["36453","CERESER MORANGO GFA VD 660ML"],["36449","CERESER PESSEGO GFA VD 660ML"],["36448","CERESER SIDRA GARRAFA VD 660ML"],["36450","CERESER UVA GFA VD 660ML"],["36234","CERVEGELA AL ORIG BEGE 1UN GF 600ML CX3"],["35108","CERVEGELA PL SPATEN 1 UN P/GFA 600ML CX3"],["27673","CERVEGELA PL. SPATEN P/ GFA 600ML CX C/3"],["23671","CERVEGELA PLASTICA BRAHMA 1 UN P/ GFA 1L CX C/3"],["23672","CERVEGELA PLASTICA BRAHMA 1 UN P/ GFA 600ML CX C/3"],["23673","CERVEGELA PLASTICA SKOL 1 UN P/ GFA 1L CX C/3"],["23674","CERVEGELA PLASTICA SKOL 1 UN P/ GFA 600ML CX C/3"],["32547","CHAC CHAC VINHO BRANCO GFA VD 750ML"],["32549","CHAC CHAC VINHO T MALBEC GFA VD 750ML"],["22009","CHICLETE ADAMS HORTELA 2,8G CX C/100"],["21955","CHIVAS REGAL WHISKY 12 ANOS GFA VIDRO 1L"],["8776","CHOPP BRAHMA BLACK BARRIL KEG 30L"],["828","CHOPP BRAHMA CLARO BARRIL KEG 30L"],["838","CHOPP BRAHMA CLARO BARRIL KEG 50L"],["827","CHOPP BRAHMA ESCURO BARRIL KEG 30L"],["32485","CHOPP BRAHMA LT SLEEK 350ML CX CART C8"],["8037","CHOPP CL STELLA ARTOIS BARRIL KEG 30L"],["15321","CHOPP COLORADO APPIA BARRIL KEG 30L NPAL"],["15322","CHOPP COLORADO INDICA BARRIL KEG 30L NP"],["19520","CHOPP COLORADO LAGER BARRIL KEG 30L NPAL"],["17326","CHOPP PATAGONIA AMBER LAGER KEG 30L"],["36479","CHUVA DE PRATA BRANCA GR VD 660ML"],["36476","CHUVA DE PRATA ROSE GR VD 660ML"],["29278","COCKLAND GOLD WISKY GFA VD 1L"],["19581","COLORADO APPIA LATA 410ML PACK 12"],["22027","COLORADO APPIA LT SLEEK 350ML C8 CX CART"],["14550","COLORADO APPIA OW 600ML CX C-12 ARTE"],["14548","COLORADO CAUIM OW 600ML CX C-12 ARTE"],["14554","COLORADO DEMOISELLE OW 600ML CX C-12 ART"],["21678","COLORADO INDICA LT SLEEK 350ML C8 CX CAR"],["14552","COLORADO INDICA OW 600ML CX C-12 ARTE"],["23042","COLORADO LAGER BIB 6L NPAL"],["19515","COLORADO LAGER LATA 410ML PACK 12"],["20853","COLORADO LAGER LT SLEEK 350ML C8 CX CART"],["21023","COLORADO LAGER LT XSLEEK 410ML CX C12"],["19166","COLORADO LAGER ONE WAY 600ML CX C-12 ART"],["27866","COR CERO SUNBREW LN 330ML SP BAS CX C4"],["34263","CORONA CERO SUN N LT SL 350ML C8 CX CART"],["13827","CORONA EXTRA LN 355ML SP C/4 - CX70 AUS"],["32749","CORONA EXTRA N 600ML RGB"],["32392","CORONA EXTRA N LT 269ML CX CARTAO C/8 NP"],["32785","CORONA EXTRA N OW 600ML GARRAFEIRA C/24"],["18836","CORONA EXTRA NAC LN 330 CX C/24 NPAL"],["20651","CORONA N LT SLEEK 350ML CX 8"],["18780","CORONITA EXTRA N OW 210ML CX C/4 SIXPA"],["22545","COROTE COQUETEL LIMAO GARRAFA PET 500 ML CX C/12"],["32175","CROKISSIMO AMEND CROC LEV SALGADO PCT 24G FD/36"],["35228","CROQUES BATATA C COSTELINHA LIM 45G CX10"],["33676","CROQUES BATATA CH PICAN BARB PC 200G CX8"],["33214","DANTE ROBINO BONARDA GFA VD 750ML CX C6"],["33213","DANTE ROBINO LEG BLEND D BL GF 750ML CX6"],["33215","DANTE ROBINO LEG BONARDA GFA 750ML CX C6"],["33218","DANTE ROBINO LEG CAB SAUV GFA 750ML CX 6"],["33216","DANTE ROBINO LEG MALBEC GFA 750 ML CX C6"],["33217","DANTE ROBINO WHITE BLEND GFA 750 ML CX 6"],["16639","DO BEM GOIABA TETRAPAK 1L CX12"],["16013","DO BEM LARANJA TETRAPAK 1L CX12"],["16637","DO BEM PESSEGO TETRAPAK 1L CX12"],["35404","DO BEM SUCO DE UVA TETRAPAK 200ML CX C24"],["24380","DOM BOSCO VINHO BORDO SUAVE GFA VD 750 ML"],["36473","DOM BOSCO VINHO BRANC SUAVE GR VD 750ML"],["36475","DOM BOSCO VINHO ROSE GR VD 750ML"],["24382","DOM BOSCO VINHO TINTO SUAVE GFA VD 750 ML"],["22562","DOMECQ COQUETEL COMPOSTO GFA VIDRO 1L"],["27825","DOMUS CONHAQUE GFA VD 900ML"],["24289","ELMA CHIPS AMENDOIM JAPONES PCT 145G C16"],["243014","ELMA CHIPS AMENDOIM S PELE PCT 100G CX24"],["35415","ELMA CHIPS CHEETOS ONDA REQ PC 105G CX14"],["36079","ELMA CHIPS DORITOS NACHO PCT 120G CX C17"],["35682","ELMA CHIPS RUFFLES CEB E SAL P 68G CX25"],["35686","ELMA CHIPS RUFFLES SAL PCT 68G CX C25"],["2544","EXTRA SERRAMALTE 600ML"],["13843","EXTRA SERRAMALTE ONE WAY 300ML CXPAP12"],["34654","FLOPITO PIRULITO CORACAO VERM PCT P 500G"],["34405","FLORESTAL BALA BRAZIL COFFEE PCT PL 500G"],["35113","FLYING FISH LONG NECK 330ML SPACK SH C/4"],["9351","FRANZISKANER HW HELL ONE WAY 500ML CX20"],["25700","FUSION PET 2L SHRINK C6"],["11084","FUSION LATA 250ML SIX-PACK"],["31272","FUSION LT 473ML SH C/12 NPAL"],["32425","FUSION MELANCIA LT 473ML SH C/12 NPAL"],["31962","FUSION MELANCIA PET 2L SHRINK C/6"],["13486","FUSION PET 1L SHRINK C/6"],["22220","FUSION PET 500ML SH C/12 NPAL"],["31964","FUSION TROPICAL PET 2L SHRINK C/6"],["29091","GALLO AZEITE O TIPO UNICO LT 500ML"],["24486","GALLO AZEITE OLIVA EX. VIR. GFA VDR 500ML"],["24491","GALLO AZEITE OLIVA TP UNICO GFA VDR 500ML"],["25299","GARRAFEIRA PL. PRETO B. 1UN P24 GF 300ML"],["11508","GATOR PRIM ORAN POU118MLCAR C/10CXPAPC/2"],["32067","GATORADE BERRY BLUE PET 500ML SIXPACK"],["7979","GATORADE FRUTAS CITR PET 500ML SIX PACK"],["7981","GATORADE LARANJA PET 500ML SIX PACK"],["7982","GATORADE LIMAO PET 500ML SIX PACK"],["7985","GATORADE MARACUJA PET 500ML SIX PACK"],["23731","GATORADE MELANC MORANGO PET 500ML SIXPAC"],["7983","GATORADE MORANGO MARACUJA PET500ML SIXPA"],["7980","GATORADE TANGERINA PET 500ML SIX PACK"],["7977","GATORADE UVA PET 500ML SIX PACK"],["29495","GATORADE ZERO CAL FRUT SIL PET350 SH C12"],["25546","GFE PL. A. L. A. PR B. 1 UN P23 GF 300ML"],["22249","GOOSE I MIDWAY NAC LT SLEEK 350ML C8 CX"],["18142","GOOSE ISLAND MIDWAY NAC LN 355ML CX C/12"],["27001","GORDONS GIN DRY GARRAFA VIDRO 750ML"],["23556","GRAN DANTE BONARDA OW X6 750CC"],["23554","GRAN DANTE MALBEC GFA OW 750ML CX C6"],["33220","GRAN DANTE NATURE GFA VD 750ML CX C3"],["36513","GRANDCRU VINH ROS SEC SERIA MAL GVD750ML"],["36510","GRANDCRU VINH ROS SUAV BENJ BLE GVD750ML"],["36509","GRANDCRU VINHO TIN SEC BENJ MAL GVD750ML"],["34320","GUARANA ANT ZERO LATA 350ML SH C/12 MP"],["11556","GUARANA ANTARCTICA ZERO PET 1L CAIXA C/6"],["1708","GUARANA ANTARCTICA ZERO PET 2,5L CX C/6"],["19321","GUARANA ANTARCTICA ZERO PET 200ML SH C12"],["2250","GUARANA CHP ANT DIET MIX BAG IN BOX 18L"],["34027","GUARANA CHP ANT LATA 350ML SH C/12 MP"],["36242","GUARANA CHP ANT ONE WAY 300ML CX C/24"],["33611","GUARANA CHP ANT ONE WAY 300ML GFE C 23"],["18390","GUARANA CHP ANTAR LATA 350ML SH C18 MULT"],["2243","GUARANA CHP ANTAR MIX BAG IN BOX 18L"],["9085","GUARANA CHP ANTARCT DIET LT350ML SHC/12"],["8413","GUARANA CHP ANTARCT DIET PET1,5L SH C/6"],["9084","GUARANA CHP ANTARCT LT350ML SH C/12 NPAL"],["11721","GUARANA CHP ANTARCT PET 500ML SHC/12NPAL"],["36241","GUARANA CHP ANTARCTICA 300ML"],["2353","GUARANA CHP ANTARCTICA DIET PET 2L CXC/6"],["2585","GUARANA CHP ANTARCTICA GFA VD 1L"],["14844","GUARANA CHP ANTARCTICA LT 269ML SH C/15"],["8411","GUARANA CHP ANTARCTICA PET 1,5L SH C/6"],["19164","GUARANA CHP ANTARCTICA PET 1L PACK C/2 M"],["7947","GUARANA CHP ANTARCTICA PET 2,5L CX C/6"],["18152","GUARANA CHP ANTARCTICA PET 200ML SH C/12"],["2777","GUARANA CHP ANTARCTICA PET 237ML SH C/12"],["2349","GUARANA CHP ANTARCTICA PET 2L CAIXA C/6"],["18137","GUARANA CHP ANTARCTICA PET 3L C4 SH LISO"],["2132","GUARANA CHP ANTARCTICA PET1L CX C/6 NRIO"],["8919","GUARANA CHP ANTARCTICA PET600ML CXC/12 N"],["8921","GUARANA CHP ANTART DIET PET600ML CX C/12"],["32169","GUARAVITA NAT COPO PLAST 290ML CX/24 SP"],["22209","GUARAVITA NATURAL COPO 290ML CX C/24"],["32166","GUARAVITON GIN ZE GF PET 500ML PCK/12 SP"],["32164","GUARAVITON N ACAI GF PET 500ML PCK/12 SP"],["32173","GUARAVITON NA GIN GF PET 500ML PCK/12 SP"],["34454","H20 LIMONETO LT SLEEK 350ML SH C 12"],["11103","H2OH CITRUS C/GAS PET1,5L SH C/06 NPAL"],["8793","H2OH LIMAO C/GAS PET 1,5L CAIXA C/6"],["8791","H2OH LIMAO C/GAS PET 500ML CAIXA C/12"],["13065","H2OH LIMONETO PET 1,5 SH C/6 NPAL"],["13061","H2OH LIMONETO PET500 SH C/12 NP"],["32069","H2OH PITAYA E LIMAO PET 500ML SH C/12 NP"],["22003","HALLS CEREJA 28G CX C/21"],["22007","HALLS EXTRA FORTE 28G CX C/21"],["29733","HALLS MELANCIA 28G CX C/21"],["22005","HALLS MENTA 28G CX C/21"],["27177","HALLS MENTOL 28G CX C 21"],["27179","HALLS MORANGO 28G CX C 21"],["34410","HALLS UVA VERDE ENVELOPE 28G CX C/21"],["29382","HOCUS POCUS ALMA GFA VD 500ML CX6"],["31176","HOCUS POCUS ALMA LT 350ML CX/6"],["29217","HOCUS POCUS AURA GFA VDR 500ML CX6"],["29214","HOCUS POCUS AURA LONG NECK VDR 355ML CX6"],["31172","HOCUS POCUS AURA LT 350ML CX/6"],["28717","HOCUS POCUS INTERSTELLAR GFA VD 500ML C6"],["29223","HOCUS POCUS MAGIC TRAP GFA VDR 500ML CX6"],["29292","HOCUS POCUS ORANGE SUNS GFA VD 500ML CX6"],["22235","HOEGAARDEN W NAC LT 269ML CX CAR C8 NPAL"],["19607","HOEGAARDEN WHITE NAC OW 330ML CX C/12 NP"],["22506","JIM BEAM BLACK EXTRA AGED GFA VIDRO 1L"],["21539","JIM BEAM WHITE GFA VIDRO 1L"],["23030","JOHNNIE WALKER BLACK LABEL GFA VD 750ML"],["23029","JOHNNIE WALKER BLACK LABEL GFA VIDRO 1L"],["21778","JOHNNIE WALKER RED LABEL GFA VD 750ML"],["21526","JOHNNIE WALKER RED LABEL GFA VIDRO 1L"],["29518","JOHNNIE WALKER WHISKY BLONDE GFA VD750ML"],["29408","KEROCOCO AGUA DE COCO TETRAPK 200ML CX27"],["9074","KRONENBIER LATA 350ML SH C/12 NPAL"],["34178","LACTA OURO BRANCO 1 UN 20G PCT C 540G"],["27368","LACTA OURO BRANCO PTC 1KG"],["34180","LACTA SONHO DE VALSA 1 UN 20G PCT C 540G"],["27175","LACTA XTRA BLACK 45G CX C 24"],["22501","LARIOS 12 GFA VD 700ML"],["21541","LARIOS ORIGINAL GFA VD 700ML"],["22502","LARIOS ROSE GFA VD 700ML"],["35413","LAYS CLASSICA PACOTE 70G CX C24"],["35708","LAYS SOUR CREAM PACOTE 70G"],["35528","LAYS SOUR CREAM PACOTE 70G CX24"],["9805","LEFFE BLONDE ONE WAY 330ML CX C/24"],["9099","LIPTON LIMAO LATA 340ML SH CX12 NPAL"],["11190","LIPTON LIMAO PET 1,5 SHRINK C/6 HF"],["9102","LIPTON PESSEGO LATA 340ML SH CX C/12 NPA"],["11191","LIPTON PESSEGO PET 1,5 SHRINK C/6 HF"],["24080","MAGUARY NECTAR TANGERINA TETRA PAK 1 L CX C/12"],["9081","MALZBIER BRAHMA LATA 350ML SH C/12 NPAL"],["371","MALZBIER BRAHMA LN355ML SIX PAC BAND C/4"],["21922","MARTINI EXTRA DRY GARRAFA VIDRO 750 ML"],["21460","MASCARA ALGODAO E ALCOOL GEL 190G CX C20"],["24403","MAXIMO ARROZ NAO PARBOILIZADO PCT 5KG FD C/6"],["34679","MENDORATO PACOTE 24G FD C 60"],["28382","MESA MADEIRA DOBR BUDWEISER 1UN DE MESA"],["24168","MICHELOB ULTRA N LN 330ML SP SH C/4"],["4262","MICHELOB ULTRA N LT SLEEK 350ML C8 CX CA"],["22091","MIKES HARD LEM PITAIA N LT269ML SH12"],["23450","MIKES HARD LEM PITAIA N LT269ML SH12"],["23451","MIKES HARD LEM TANGERINA N LT269ML SH12"],["20248","MIKES HARD LEMONADE N LN 275ML CX C/6"],["23449","MIKES HARD LEMONADE N LT 269ML SH C/12"],["20198","MIKES HARD LEMONADE N LT 269ML SH C12 NP"],["20152","MIKES HARD LEMONADE N LT 350ML SH C/12"],["27686","MIKES HL N LN 275ML SIX PACK SH C/4"],["28216","MINALBA AGUA M C GAS LATA 310ML FD12"],["29334","MINALBA AGUA M NAT S GAS COPO 200ML CX48"],["28214","MINALBA AGUA M S GAS LATA 310ML FD12"],["33347","MINALBA AGUA MIN C GAS LATA 269ML CX12"],["33238","MINALBA AGUA MIN S GAS LATA 269ML CX12"],["4247","MINALBA AGUA MINERAL C/GAS GFA PET 1,5L FD C/6"],["4326","MINALBA AGUA MINERAL C/GAS GFA PET 310ML FD C/12"],["4254","MINALBA AGUA MINERAL C/GAS GFA PET 510ML FD C/12"],["4249","MINALBA AGUA MINERAL S/GAS GFA PET 1,5L FD C/6"],["4243","MINALBA AGUA MINERAL S/GAS GFA PET 10L"],["4341","MINALBA AGUA MINERAL S/GAS GFA PET 310ML FD C/12"],["4311","MINALBA AGUA MINERAL S/GAS GFA PET 510ML FD C/12"],["32362","MINALBA AGUA MINERAL S/GAS GRFA PET 5L"],["24604","MINALBA AGUA PREMIUM C/GAS GFA VDR 300ML CX/12"],["24609","MINALBA AGUA PREMIUM S/GAS GFA VDR 300ML CX/12"],["22106","MINI OREO 35G CX C/10"],["29058","NADIR AMERICANO C ORIG COPO VD 190ML C12"],["29054","NADIR CALD COLORADO COPO VD 350ML CX6"],["23233","NATU NOBILIS APERITIVO GARRAFA VIDRO 1 L"],["8757","NORTENA ONE WAY 960ML CX PAPELAO C/12"],["33219","NOVECENTO BLEND DE BLANC GFA 750ML CX C6"],["21898","NOVECENTO EXTRA BRUT OW X6 750CC"],["21900","NOVECENTO EXTRA DULCE OW X6 750CC"],["21892","NOVECENTO MALBEC OW X6 750CC"],["21894","NTO CABERNET OW X6 750CC"],["25151","OLD PARR WHISKY GFA VD 1L"],["28698","OREO ORIGINAL BISCOITO RECH PCT 90G CX48"],["28700","OREO ORIGINAL BISCOITO RECHE PCT 36G CX8"],["24819","ORIGINAL 300ML"],["2546","ORIGINAL 600ML"],["29253","ORIGINAL GFA VD 1L"],["19310","ORIGINAL LATA 350ML CX CARTAO C/12 NPAL"],["20603","ORIGINAL LT 269ML CX CARTAO C/8 NPAL"],["33324","ORIGINAL LT 269ML SH C 15 MULTPACK"],["33818","ORIGINAL LT 350ML SH C/12 NP MULTIPACK"],["14340","ORIGINAL ONE WAY 300ML CX PAPELAO C/12"],["8336","ORIGINAL ONE WAY 600ML CX 12"],["21887","ORLOFF DRY GFA VD 1 L"],["21789","ORLOFF GFA VIDRO 1L"],["24571","ORLOFF VODKA GFA VD 1,75L"],["32128","PACOQUITA QUADRADA PCT PL 18G DSP C/24"],["32131","PACOQUITA ROLHA EMBALADA PCT 15G PT/50"],["31352","PACOQUITA ROLHA EMBALADA POTE 750G CX C6"],["23651","PARATUDO RAIZES AMARGAS GARRAFA VIDRO 900ML"],["22382","PASSPORT SCOTCH BLENDED GFA VIDRO 1 L"],["4141","PATAG AMB LAG NAC LT SLEEK 350ML C8 CART"],["4143","PATAG BOH PIL NAC LT SLEEK 350ML C8 CART"],["18772","PATAGONIA AMB LAG NAC OW 740ML CX C6"],["23044","PATAGONIA AMBER LAGER BIB 6L NPAL"],["17276","PATAGONIA AMBER LAGER LN355ML CX12"],["17268","PATAGONIA BOHEMIAN PILSENER LN355ML CX12"],["24158","PATAGONIA IPA 600ML"],["23218","PATAGONIA IPA LN 355ML CX C/12"],["4198","PATAGONIA IPA LT SLEEK 350ML C8 CX CART"],["23220","PATAGONIA IPA ONE WAY 740ML CX6"],["4193","PATAGONIA WEISSE N LT SLEEK 350ML C8 CAR"],["18752","PATAGONIA WEISSE NACIONAL OW 740ML CX 6"],["28512","PEPSI BLACK 1,5L SH C/6"],["29143","PEPSI BLACK PET 1 L SHRINK C/6"],["4293","PEPSI BLACK PET 200ML SH C/12"],["909","PEPSI COLA 284ML"],["11593","PEPSI COLA GFA VD 1L"],["14842","PEPSI COLA LATA 269ML SH C/15"],["9096","PEPSI COLA LATA 350ML SH C/12 NPAL"],["7500","PEPSI COLA LIGHT PET 2L CAIXA C/6"],["772","PEPSI COLA MIX BAG IN BOX 18L"],["18266","PEPSI COLA PET 200ML SH C/12"],["8418","PEPSI COLA PET 1,5L CX C/06"],["7325","PEPSI COLA PET 1L CAIXA C/12"],["7703","PEPSI COLA PET 1L CAIXA C/6"],["7945","PEPSI COLA PET 2,5L CAIXA C/6"],["10032","PEPSI COLA PET 237ML SHRINK C/12"],["504","PEPSI COLA PET 2L CAIXA C/6"],["1116","PEPSI COLA PET 3,3 L SH C/04"],["18341","PEPSI COLA PET 3000 ML C/04 SH LISO."],["8923","PEPSI COLA PET 600ML CX C/12 NPAL"],["9093","PEPSI TWIST LATA 350ML SH C/12 NPAL"],["9442","PEPSI TWIST MIX BAG IN BOX 18L"],["20178","PEPSI TWIST PET 200ML SH C/12"],["4409","PEPSI TWIST PET 2L SHRINK C/6"],["9274","PEPSI ZERO LATA 350ML SH C/12 NPAL"],["15190","PEPSI ZERO MIX BAG IN BOX 18L"],["9276","PEPSI ZERO PET 2L CX C/6"],["32538","PERGOLA SEL VINHO TINTO SUAVE GFA VD 1L"],["32483","PERRIER AGUA M C GAS GFA VD 200ML PACK 6"],["24645","PERRIER CG GARRAFA DE VIDRO 330ML CX24"],["24641","PERRIER CG GARRAFA VD 750 ML CX 12"],["24258","PETROPOLIS AGUA MIN SEM GAS 510ML PET 510ML CAIXA C/12"],["23606","PIR. B. L. WHEY F. VERM. ZL TP250ML CX12"],["23256","PIRACANJUBA CREME DE LEITE TETRAPAK 200G CX C/27"],["23246","PIRACANJUBA LEITE CONDENSADO TETRAPAK 395G CX C/27"],["23614","PIRACANJUBA SEMI DESN. ZERO LACT. CX 1L CX C/12"],["23055","PIRACANJUBA UHT INTEGRAL CX 1L CX C/12"],["31875","PIRACANJUBA WHEY MORANGO TPAK 250MLC12"],["23594","PIRAKIDS BEB. LACTEA CHOC. TP 200ML CX27"],["21791","PIRASSUNUNGA 51 GFA VIDRO 965ML"],["23443","PITU AGUARDENTE GARRAFA VIDRO 965ML"],["23184","PITU AGUARDENTE LATA 350 ML CX C/12"],["22641","PRESIDENTE GFA VIDRO 900ML"],["33236","PUREZA VITAL AGUA MIN S GAS GALAO 6,3L"],["24044","PUREZA VITAL AGUA MIN. C GAS GFA PET 510ML FD C/12"],["24042","PUREZA VITAL AGUA MIN. S GAS GFA PET 1,5L FD C/6"],["24046","PUREZA VITAL AGUA MIN. S GAS GFA PET 510ML FD C/12"],["32159","QUERO MOLHO DE ALHO FRASCO PLAST 150ML"],["26150","QUERO MOLHO DE ALHO FRASCO VD 150ML CX24"],["27432","QUERO MOLHO DE TOMATE PIZZA SCH300G CX24"],["34429","RED BULL AMORA LT 250ML FOUR PACK"],["19225","RED BULL BR LATA 250ML CAIXA C/24"],["19228","RED BULL BR LATA 250ML FOUR PACK NPAL"],["19229","RED BULL BR LATA 250ML SIX PACK NPAL"],["19227","RED BULL BR LATA 355ML FOUR PACK"],["30045","RED BULL BR LATA 473ML CX C 12"],["36704","RED BULL MACA EDIT SUGFREE LT 250ML CX24"],["24306","RED BULL MELANCIA LT 250ML FOUR PACK NPA"],["32969","RED BULL S MOR E PESSEGO LT 250ML FOUR P"],["34770","RED BULL SF POMELO LATA 250ML FOUR PACK"],["19231","RED BULL SUGAR FREE LATA 250ML FOUR PACK"],["33298","RED BULL SUM FIGO E MACA LT 250ML CX C24"],["34133","RED BULL SUM MAR E MELAO LT 250ML CX C24"],["34420","RED BULL SUM MARAC E MELAO LT 250ML FP"],["21666","RED BULL TROP BR LT 250ML FOUR PACK NPAL"],["34432","RED BULL TROPICAL BR LATA 473ML CX C 12"],["36434","RED BULL ZERO BR LATA 250ML FOUR PACK NP"],["22898","RELEVOS VINHO BRANCO GRF OW 750ML CX C/6"],["22900","RELEVOS VINHO TINTO GRF OW 750ML CX C/6"],["32541","RENO VINHO TINTO GFA VD 750ML"],["27784","RESERVADO VINHO CAB SAUVIGNON GFA 750ML"],["27622","RESERVADO VINHO CARMENERE GFVD750ML"],["27621","RESERVADO VINHO MOSCATO SPRITZER GFA VD 750 ML"],["27567","RESERVADO VINHO ROSE GFA VD 750ML"],["27625","RESERVADO VINHO SAUVIGNO BLANC GFVD750ML"],["29891","ROCKS DRY GIN GARRAFA VIDRO 1 L"],["22543","ROCKS STRAMBERRY GIN GFA VIDRO 1L"],["23442","SALINAS UMBURANA CACHACA GARRAFA VIDRO 700ML"],["25329","SALTON ESPUMANTE BRUT GFA VD 750 ML"],["25347","SALTON ESPUMANTE CLAS MOSTEL GFAVD 750ML"],["25333","SALTON ESPUMANTE MOSCATEL GFA VD 750 ML"],["24603","SAN PELLEGRINO COM GAS GARRAFA VD 250 ML CX24"],["24611","SAN PELLEGRINO COM GAS GARRAFA VD 750 ML CX 15"],["27375","SAO FRANCISCO CACHACA GARRAFA VD 970ML"],["32441","SAO LOURENCO AGUA M S GAS GFPET1,260L F6"],["24048","SAO LOURENCO AGUA MIN. C GAS GFA PET 1260ML FD C 6"],["24057","SAO LOURENCO AGUA MIN. C GAS GFA PET 300ML FD C 12"],["24085","SAO LOURENCO AGUA MIN. C GAS GFA PET 510ML FD C 6"],["24059","SAO LOURENCO AGUA MIN. S GAS GFA PET 300ML FD C 12"],["24055","SAO LOURENCO AGUA MIN. S GAS GFA PET 510ML FD C 6"],["18135","SERRAMALTE LATA 350ML SIX PACK SH C/2 NP"],["23193","SK BEATS MOSC MULE LT 269ML CX CAR 8 NPA"],["972","SKOL 300ML"],["982","SKOL 600ML"],["20174","SKOL BEATS 150 BPM 100ML SH C/15"],["29974","SKOL BEATS GT LN 269ML SIX-PACK SH C/2"],["23269","SKOL BEATS GT LN 269ML SIX-PACK SH C/4"],["21119","SKOL BEATS GT LT 269ML CX CAR C/8"],["13566","SKOL BEATS SENSES LATA 269ML CX C/8 FRID"],["23271","SKOL BEATS SENSES LN 269ML CX C/6"],["29991","SKOL BEATS SENSES LN 269ML SXP SH C/2"],["14674","SKOL BEATS SPIRIT LT 269ML CX C/8 FRIDG"],["21737","SKOL BEATS ZODIAC FOGO LT 269ML CX C8 NP"],["28137","SKOL BT CAIPIRINHA LT 269ML CX CA C/8 NP"],["1388","SKOL GFA VD 1L 2,99"],["18278","SKOL HOPS LATA 350ML CX CARTAO C/12 NPAL"],["34608","SKOL LATA 350ML SH C/12 MULTIPAK"],["9068","SKOL LATA 350ML SH C/12 NPAL"],["17678","SKOL LATA 350ML SH C/18 NPAL MULTPACK"],["25835","SKOL LATA 410ML SH C15 NP MULTPACK 15"],["11110","SKOL LATA 550ML SHRINK C/12"],["24172","SKOL LT 269ML SH C/12 NPAL KLOS"],["18856","SKOL LT 269ML SH C/15 MULTPACK 15"],["1745","SKOL LT 269ML SH C/15 NPAL"],["9083","SKOL LT 473ML SH C/12 NPAL"],["11559","SKOL ONE WAY 300ML CX C/24"],["21572","SKOL OW 300ML CX PAPELAO C/12 MULTPACK"],["18674","SKOL PURO MALTE 300ML"],["18677","SKOL PURO MALTE 600ML"],["18678","SKOL PURO MALTE GFA VD 1L"],["19644","SKOL PURO MALTE LT SLEEK 350ML SH C 12"],["36028","SKOL ZERO LT SLEEK 350ML SH C 12"],["21781","SMIRNOFF ICE GFA VD 275ML CX C/24"],["32854","SMIRNOFF ICE LT 269 ML CX C/24"],["21530","SMIRNOFF ORIGINAL GFA VIDRO 998ML"],["18267","SODA LIMONADA ANT PET 200ML SH C/12"],["9087","SODA LIMONADA ANTAR LT350ML SH C/12 NPAL"],["2248","SODA LIMONADA ANTAR MIX BAG IN BOX 18L"],["9088","SODA LIMONADA ANTARCT DIET LT350MLSHC/12"],["2354","SODA LIMONADA ANTARCT DIET PET 2L CX C/6"],["2655","SODA LIMONADA ANTARCT PET 237ML SH C/12"],["2592","SODA LIMONADA ANTARCTICA 290ML"],["2350","SODA LIMONADA ANTARCTICA PET 2L CX C/6"],["26204","SPATEN LT 269ML CX CARTAO C/8 NPAL"],["23186","SPATEN N 600ML"],["33223","SPATEN N BIB 6L NPAL"],["36015","SPATEN N LN 330ML SIX-PACK SH C/2"],["21632","SPATEN N LN 355ML SIXPACK SH C/4"],["30942","SPATEN N LONG NECK 330ML SIX-PACK SH C4"],["21658","SPATEN N LT SLEEK 350ML CX CART C12"],["21668","SPATEN N ONE WAY 600ML CX C/12 NP ARTE"],["32498","STELLA ART PUR GOLD LT 269ML CX CT C8 NP"],["32500","STELLA ART PUR GOLD LT SL 350ML C8 CX CT"],["20530","STELLA ARTOIS 600ML"],["22840","STELLA ARTOIS BIB 6L NPAL"],["8153","STELLA ARTOIS LN 275ML SIX PACK CX C/04"],["18807","STELLA ARTOIS LN 330ML 6PACK SHR C 4"],["25762","STELLA ARTOIS LT 410ML CX15 NP MULTIPACK"],["19729","STELLA ARTOIS LT SLEEK 350ML C 8 CX CART"],["1699","STELLA ARTOIS LT269ML CX C/8 FRIDGE PACK"],["20535","STELLA ARTOIS ONE WAY 600ML CX 12"],["15134","STELLA ARTOIS OW 550ML CX C/ 12"],["29580","STELLA ARTOIS PURE GOLD LN 330 SXP SH C4"],["9089","SUKITA LATA 350ML SH C/12 NPAL"],["21441","SUKITA LIMAO PET 2L CAIXA C/6"],["7431","SUKITA MIX BAG IN BOX 18L"],["253","SUKITA PET 1L CAIXA C/6"],["18268","SUKITA PET 200ML SH C/12"],["10028","SUKITA PET 237ML SHRINK C/12"],["503","SUKITA PET 2L CAIXA C/6"],["8931","SUKITA PET 600ML CX C/12 NPAL"],["23163","SUKITA TUBAINA PET 2L SHRINK C/6"],["1164","SUKITA UVA LATA 350ML SH C/12 NPAL"],["22259","SUKITA UVA PET 200ML SH C/12"],["10030","SUKITA UVA PET 237ML SHRINK C/12"],["1166","SUKITA UVA PET 2L CAIXA C/6"],["29215","TANG REFRESCO EM PO UVA PCT 18G DP C/18"],["29201","TANG REFRESCO PO ABACAXI PCT 18G DP C18"],["29199","TANG REFRESCO PO LARANJA PCT 18G DP C18"],["29197","TANG REFRESCO PO LIMAO PCT 18G DP C18"],["29209","TANG REFRESCO PO MARACUJA PCT 18G DP C18"],["29207","TANG REFRESCO PO MORANGO PCT 18G DP C18"],["35245","TANG REFRESCO PO TANGERINA PCT 18G DP 18"],["21527","TANQUERAY LONDON DRY GFA VD 750ML"],["25072","TEISSEIRE XAROPE A CRANBERRY GF VD 700ML"],["4204","TIAL AGUA DE COCO TETRA PAK 1 L CX C/12"],["26411","TIAL NECTAR DE CAJU TP 1L CX 12"],["4166","TIAL NECTAR DE UVA TETRA PAK 1L CX C/12"],["4177","TIAL NECTAR LARANJA TETRA PAK 1L CX C12"],["33878","TIAL NECTAR MISTO UVA E PERA TP 1L CX12"],["24304","TODDYNHO 200ML TETRA PAK 200 ML CX C/27"],["33933","TONICA ANT INTENSE LATA SL 350ML SH C/12"],["9092","TONICA ANTARCTICA DIET LT350MLSHC/12 PAL"],["9091","TONICA ANTARCTICA LT 350ML SH C/12 NPAL"],["22200","TONICA ANTARCTICA PET1LSH C/06"],["19305","TONICA ANTARCTICA ZERO LATA 269ML SH C15"],["22202","TONICA ANTARCTICA ZERO PET 1L SH C/06"],["33430","TORCIDA SALG TRIG CEBOLA PCT 60G C24"],["33428","TORCIDA SALG TRIG CHURRASCO PCT 60G C24"],["28862","TORCIDA SALG TRIG PIMENT MEX PCT70G CX20"],["33432","TORCIDA SALG TRIG PIMENTA PCT 60G C24"],["33426","TORCIDA SALG TRIG QUEIJO PCT 60G C24"],["34296","TRIDENT CANELA ENVELOPE 8G CX C/21"],["21968","TRIDENT HORTELA 8G CX C/21"],["21973","TRIDENT MELANCIA 8G CX C/21"],["21970","TRIDENT MENTA 8G CX C/21"],["34298","TRIDENT MORANGO ENVELOPE 8G CX C21"],["21974","TRIDENT TUTTI-FRUTTI 8G CX C/21"],["35003","TRIDENT XFRESH 5S PRETO CEREJA ENVELOPE 8G CX C/21"],["34779","TRIDENT XFRESH HERBAL ENVELOPE 8G CX C21"],["26099","TRIDENT XFRESH INTENSE 8G CX C/ 21"],["21779","VELHO BARREIRO GFA VIDRO 910ML"],["28673","VERMELHAO APERITI EMB GUST LIM GFVD740ML"],["29060","VINHO DO ZE BRANCO GFA OW 750ML CX C6 NP"],["29079","VINHO DO ZE ROSE GFA OW 750ML CX C/6 NP"],["29050","VINHO DO ZE TINTO GFA OW 750ML CX C/6 NP"],["32750","VINHO ESP DO ZE BRUT BCO GF OW 750ML CX6"],["32746","VINHO ESP DO ZE MOS ROSE GF OW 750ML CX6"],["17874","WALS COCO BAMBU OW 600ML CX C/12 ARTE"],["21792","WHITE HORSE GFA VIDRO 1L"],["35555","XEQUE MATE B M MAT R G LIM LT 362ML CX12"],["29040","YPE ASSOLAN LA DE ACO PCTE 45G"],["31710","YPE DESINFETANTE PINHO TRADICAO FRASCO PLAST 500ML"],["32718","YPE ESPON SINT MULT PCT PL 8G PACK C/10"],["32354","YPE LAVA LOUCA L CLEAR FRASC PL 500ML C6"],["32355","YPE LAVA LOUCA L NEUTRO FRASC PL 500MLC6"],["31791","YPE LIMPADOR MULT CLASSICO FRASC500MLC12"],["29068","YPE MULTIUSO CLASSICO FRASCO PLAS 500ML"],["29042","YPE TIXAN LAVA ROUPAS PRIMAVEA CAIXA800G"],["26929","YPIOCA CACHACA GOLD GFA VD 965ML"],["31198","YPIOCA CACHACA OURO GFA VD 965ML RET CX/12"],["29925","YPIOCA CACHACA PRATA SUAVE GFA VD 965 ML"],["26936","YPIOCA CONTA GOTAS GOLD GFA VD 965ML"],["29462","YVY GIN SECO CLASSICO MAR GFAVD 750ML"],["29474","YVY GIN SECO CLASSICO MAR LATA 710ML"],["29481","YVY VODKA GFAVD 750ML"],["36773","ZE DEL SACOL P AM 1UNSC13,8G 50X60 SH500"]];
-const norm=t=>t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-const PN=P.map(p=>norm(p[1]));
-const esc=t=>t.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
-const pq=document.getElementById("pq"),plist=document.getElementById("plist"),pmeta=document.getElementById("pmeta"),pmore=document.getElementById("pmore");
-let pres=[],pshow=60,ptoks=[];
-function hl(name){
-  let h=esc(name);
-  ptoks.filter(t=>t.length>1&&!/^\d+$/.test(t)||/^\d+$/.test(t)&&t.length>2).forEach(t=>{
-    const re=new RegExp("("+t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","ig");
-    h=h.replace(re,"<mark>$1</mark>");
-  });
-  return h;
-}
-function prender(){
-  const part=pres.slice(0,pshow);
-  plist.innerHTML=part.map(i=>`<div class="prod" data-c="${P[i][0]}"><span class="code">${P[i][0]}</span><span class="nm">${hl(P[i][1])}</span></div>`).join("");
-  pmore.classList.toggle("hidden",pres.length<=pshow);
-  pmore.textContent="Mostrar mais ("+(pres.length-pshow)+" restantes)";
-  pmeta.textContent=pres.length?(pres.length+" de "+P.length+" produtos"):"Nenhum produto encontrado. Tente menos palavras.";
-}
-function pbuscar(){
-  const q=norm(pq.value.trim());
-  ptoks=q.split(/\s+/).filter(Boolean);
-  pshow=60;
-  if(!ptoks.length){pres=[];plist.innerHTML="";pmore.classList.add("hidden");pmeta.textContent=P.length+" produtos cadastrados. Digite para buscar.";return}
-  pres=[];
-  P.forEach((p,i)=>{
-    const ok=ptoks.every(t=>PN[i].includes(t)||p[0].startsWith(t)||(/^\d{3,}$/.test(t)&&p[0].includes(t)));
-    if(ok)pres.push(i);
-  });
-  // código exato primeiro, depois código que começa com o termo
-  const t0=ptoks[0];
-  pres.sort((a,b)=>{
-    const sa=P[a][0]===t0?0:P[a][0].startsWith(t0)?1:2, sb=P[b][0]===t0?0:P[b][0].startsWith(t0)?1:2;
-    return sa-sb||a-b;
-  });
-  prender();
-}
-pq.addEventListener("input",pbuscar);
-pmore.addEventListener("click",()=>{pshow+=100;prender()});
-plist.addEventListener("click",e=>{
-  const r=e.target.closest(".prod");if(!r)return;
-  const t=r.dataset.c;
-  const done=()=>{r.classList.add("ok");setTimeout(()=>r.classList.remove("ok"),900)};
-  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,done)}else done();
-});
-pbuscar();
-
-const pdet=document.getElementById("produtos");
-function abrirProdutos(){pdet.open=true;setTimeout(()=>{pdet.scrollIntoView({block:"start"});pq.focus()},60)}
-document.querySelectorAll('a[href="#produtos"]').forEach(a=>a.addEventListener("click",e=>{e.preventDefault();abrirProdutos()}));
-pdet.addEventListener("toggle",()=>{if(pdet.open)pq.focus()});
-
-const items=[
- "Conferir status dos veículos (03.11.10)",
- "Atualização diária feita (03.04.29.04)",
- "Mapas exportados e PCD conferido",
- "Pendências de mapa/placa verificadas (03.03.44.01)",
- "Carregamentos informados (03.11.01)",
- "Prestações de contas do retorno concluídas (03.03.02)",
- "Refugos lançados e conferidos",
- "Boletos e protocolos de vales conferidos",
- "Passagem de turno anotada"
-];
-const KEY="conferente_check_v1";
-function load(){try{return JSON.parse(localStorage.getItem(KEY)||"{}")}catch(e){return{}}}
-function save(s){try{localStorage.setItem(KEY,JSON.stringify(s))}catch(e){}}
-const st=load();
-const box=document.getElementById("checks");
-items.forEach((t,i)=>{
-  const l=document.createElement("label");l.className="check";
-  l.innerHTML=`<input type="checkbox" ${st[i]?"checked":""}><span>${t}</span>`;
-  l.querySelector("input").addEventListener("change",ev=>{st[i]=ev.target.checked;save(st)});
-  box.appendChild(l);
-});
-document.getElementById("reset").onclick=()=>{box.querySelectorAll("input").forEach(i=>i.checked=false);Object.keys(st).forEach(k=>delete st[k]);save(st)};
-
-document.getElementById("theme").onclick=()=>{
-  const r=document.documentElement;
-  const dark=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme:dark)").matches;
-  r.dataset.theme=dark?"light":"dark";
-};
-
-const links=[...document.querySelectorAll("aside a")];
-const obs=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting){
-  links.forEach(a=>a.classList.toggle("on",a.getAttribute("href")==="#"+en.target.id));
-}})},{rootMargin:"-10% 0px -80% 0px"});
-links.forEach(a=>{const t=document.querySelector(a.getAttribute("href"));if(t)obs.observe(t)});
-links.forEach(a=>a.addEventListener("click",()=>document.getElementById("side").classList.remove("open")));
-
-if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{})});
-}
-</script>
+<script src="util.js"></script>
 </body>
 </html>

@@ -74,3 +74,4 @@ h1{font-size:32px;line-height:1.2;margin:10px 0 4px}
 .ok-box{text-align:center;padding:30px 10px}
 .ok-box .big{font-size:56px}
 .ok-box code{font-family:ui-monospace,Menlo,Consolas,monospace;background:var(--code-bg);padding:2px 8px;border-radius:4px;font-size:1.05em}
+a.btn{text-decoration:none}

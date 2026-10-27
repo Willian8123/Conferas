@@ -1,0 +1,55 @@
+/* Estilos extras usados pelas páginas de conteúdo (junto com ocorr.css) */
+:root{--code-text:#eb5757;--orange:#faebdd;--orange-t:#49290e;--purple:#f6f3f9;--purple-t:#492f64}
+@media (prefers-color-scheme:dark){:root{--code-text:#ff8a80;--orange:#47331f;--orange-t:#f1c79b;--purple:#3a2f4a;--purple-t:#d3bfee}}
+html{scroll-behavior:smooth;scroll-padding-top:16px}
+h3{font-size:19px;margin:22px 0 6px;font-weight:600}
+ul,ol{padding-left:22px}
+.menu.cols{grid-template-columns:repeat(auto-fill,minmax(290px,1fr))}
+.callout .ci{font-size:20px;line-height:1.4}
+.callout a{color:inherit}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:700px){.two{grid-template-columns:1fr}}
+.topbar{display:flex;gap:8px;align-items:center;margin:8px 0 4px;flex-wrap:wrap}
+.search{flex:1;min-width:200px;border:1px solid var(--border);border-radius:8px;padding:12px 14px;font:inherit;font-size:16px;background:var(--bg);color:var(--text)}
+.search:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.btn.on{background:var(--bg-hover);font-weight:600}
+.tag{display:inline-block;padding:0 6px;border-radius:3px;font-size:12px;line-height:20px;margin-right:4px;white-space:nowrap}
+.t-retorno{background:var(--orange);color:var(--orange-t)}
+.t-puxada{background:var(--blue);color:var(--blue-t)}
+.t-carreg{background:var(--green);color:var(--green-t)}
+.t-controle{background:var(--purple);color:var(--purple-t)}
+.t-proc{background:var(--yellow);color:var(--yellow-t)}
+.tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:8px;margin:8px 0}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{text-align:left;color:var(--muted);font-weight:500;padding:8px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--bg-hover)}
+code,.code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);color:var(--code-text);border-radius:4px;padding:2px 6px;font-size:.88em}
+.code{cursor:pointer;white-space:nowrap;border:0}
+.code:hover{filter:brightness(.92)}
+.code.ok{background:#2eaadc;color:#fff}
+.steps{padding-left:0;list-style:none;counter-reset:s;margin:6px 0}
+.steps li{counter-increment:s;display:flex;gap:10px;padding:6px 0;align-items:flex-start}
+.steps li::before{content:counter(s);flex:none;width:22px;height:22px;border-radius:50%;background:var(--code-bg);font-size:12px;display:grid;place-items:center;margin-top:2px}
+details{border-radius:8px;margin:6px 0;border:1px solid var(--border)}
+details>summary{cursor:pointer;list-style:none;padding:12px 14px;border-radius:8px;font-weight:600;display:flex;align-items:center;gap:8px}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"▸";color:var(--muted);transition:transform .12s;display:inline-block;width:14px;flex:none}
+details[open]>summary::before{transform:rotate(90deg)}
+details>summary:hover{background:var(--bg-hover)}
+details .body{padding:4px 14px 12px 36px}
+.check{display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border)}
+.check input{margin-top:5px;width:18px;height:18px;accent-color:#2383e2}
+.check input:checked+span{color:var(--muted);text-decoration:line-through}
+.pbox{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0}
+.pmeta{font-size:13px;color:var(--muted);margin:6px 0}
+.prod{display:flex;gap:12px;align-items:center;padding:10px;border-bottom:1px solid var(--border);cursor:pointer;border-radius:6px}
+.prod:hover,.prod:active{background:var(--bg-hover)}
+.prod .code{font-size:15px;flex:none;min-width:64px;text-align:center}
+.prod .nm{flex:1;min-width:0;word-break:break-word}
+.prod mark,mark{background:var(--yellow);color:var(--yellow-t);border-radius:2px;padding:0 1px}
+.prod.ok .code{background:#2eaadc;color:#fff}
+.pmore{margin:10px 0}
+.more{margin:26px 0 0}
+@media print{.back,.topbar,.pbox{display:none}details{display:block}details>.body{display:block}}

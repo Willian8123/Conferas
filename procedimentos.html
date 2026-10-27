@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#37352f">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<title>Passo a passo</title>
+<link rel="stylesheet" href="ocorr.css">
+<link rel="stylesheet" href="paginas.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Menu</a>
+  <div class="ico">📝</div>
+  <h1>Passo a passo</h1>
+  <p class="sub">Procedimentos do dia a dia. Toque no título para abrir.</p>
+
+  <div class="topbar"><input id="pq2" class="search" type="search" autocomplete="off" placeholder="🔎 Filtrar procedimentos (ex.: placa, NF, WMS, SAP)"></div>
+  <div id="vazio" class="empty hidden">Nenhum procedimento encontrado.</div>
+
+
+  <details id="proc-placa" data-s="cadastro placa carreta veiculo 01.14.01 01.04.01 transportadora perfil"><summary>🪪 Cadastro de placa (carreta) · <span class="code" data-c="01.14.01">01.14.01</span></summary>
+  <div class="body"><ol class="steps">
+    <li><span>Consultar o número do veículo em <code>03.11.10</code></span></li>
+    <li><span>Preencher: marca do veículo · veículo <b>Carreta</b> · município <b>SP – 00009668</b> · EDI <b>1</b> · RENAVAM <b>1</b> · UF <b>SP</b> · tipo <b>F – Fixo</b></span></li>
+    <li><span>Transportadora: <b>verificar</b> qual é a correta</span></li>
+    <li><span>Vincular perfil: <b>Carreta 101</b></span></li>
+    <li><span>Abrir uma <b>segunda tela</b> da mesma rotina, informar a placa e deixar as duas abertas</span></li>
+    <li><span>Excluir a primeira (com tudo preenchido), preencher novamente na segunda tela e <b>salvar</b></span></li>
+  </ol></div></details>
+
+  <details id="proc-nf" data-s="nf manual simples remessa vasilhame caderninho setor 999 vendedor 9 03.01.04"><summary>🧾 Gerar NF manual · <span class="code" data-c="03.01.04">03.01.04</span></summary>
+  <div class="body"><ol class="steps">
+    <li><span>Abrir o <b>caderninho do mapa</b></span></li>
+    <li><span>Setor <b>999</b> (se estiver bloqueado, pedir liberação) · tipo <b>Simples remessa</b></span></li>
+    <li><span>Vendedor <b>9</b> – remessa de vasilhame</span></li>
+    <li><span>Itens: código do AG + quantidade e clicar no caderninho para lançar</span></li>
+    <li><span>Salvar lista · <b>não enviar para Rodshow</b> · confirmar</span></li>
+  </ol></div></details>
+
+  <details id="proc-quebra" data-s="quebrar mapa 03.03.11 transferencia nota"><summary>✂️ Quebrar mapa · <span class="code" data-c="03.03.11">03.03.11</span></summary>
+  <div class="body"><ol class="steps">
+    <li><span>Informar o <b>mapa atual</b> e a <b>nota que vai retirar</b> (TAB, TAB)</span></li>
+    <li><span>Anotar o mapa de transferência do que será retirado e o <b>novo mapa</b></span></li>
+    <li><span>Se houver mais de uma nota para retirar, informar o mapa novo em cada uma (TAB)</span></li>
+    <li><span>Inserir o mapa antigo de transferência e clicar em <b>Transferir</b></span></li>
+  </ol></div></details>
+
+  <details id="proc-wms" data-s="liberar mapa wms saldo estoque ressuprimento picking app contagem manual"><summary>🏭 Liberação de mapas no WMS</summary>
+  <div class="body">
+    <p>Para mapa <b>com ou sem saldo</b> de estoque (ressuprimento: picking, armazenagem etc.). Pode ser feito pelo app, <b>um mapa por vez</b>.</p>
+    <ol class="steps">
+      <li><span>Separação</span></li><li><span>Cargas</span></li><li><span>Liberação de documentos</span></li>
+      <li><span>Selecionar mapa e box</span></li><li><span>Liberar mapa</span></li>
+    </ol>
+    <div class="callout yellow"><span class="ci">⚠️</span><p>Se pedir item que já está na posição, faça <b>contagem manual</b> do item. Se o item existe no picking mas pede ajuste, gere contagem manual para criar a tarefa de contagem no local e gerar saldo.</p></div>
+  </div></details>
+
+  <details id="proc-tp" data-s="wms desassociar tp limpar ajuste fisico excluir"><summary>🧹 WMS – desassociar ou limpar TP</summary>
+  <div class="body"><ol class="steps">
+    <li><span>Ir em <b>Ajuste físico</b></span></li>
+    <li><span>Localizar o TP (ex.: TP01)</span></li>
+    <li><span>Clicar em <b>Excluir</b></span></li>
+  </ol></div></details>
+
+  <details id="proc-prior" data-s="planilha priorizacao pcd csv colunas"><summary>📊 Planilha de priorização (PCD)</summary>
+  <div class="body"><ol class="steps">
+    <li><span>Salvar o PCD como <code>PCD.csv</code> (qualquer pasta)</span></li>
+    <li><span>Na planilha, apagar da coluna <b>B até AN2</b></span></li>
+    <li><span>Copiar o PCD e colar a partir da coluna <b>B</b></span></li>
+  </ol></div></details>
+
+  <details id="proc-matriz" data-s="matriz habilidade task interleaving priorizacao operador funcionario novo"><summary>🧠 Priorização de carregamento do operador (WMS)</summary>
+  <div class="body"><ol class="steps">
+    <li><span>WMS → <b>Task Interleaving</b> → <b>Matriz de habilidade</b></span></li>
+    <li><span>Funcionário novo: <b>Nova matriz</b>. Existente: pesquisar o usuário pelo nome</span></li>
+    <li><span>Abrir <b>Habilidade</b>: a sequência da aba direita é a prioridade, de cima para baixo</span></li>
+    <li><span>Para alterar, clicar em <b>Ações</b> (lápis)</span></li>
+  </ol></div></details>
+
+  <details id="proc-sap" data-s="sap zc_ra33 zv_r0051 carretas pca csv centro atribuicao"><summary>💼 SAP – informações das carretas</summary>
+  <div class="body"><ol class="steps">
+    <li><span>Transação <code>ZC_RA33</code> (consultar a placa) e depois <code>ZV_R0051</code></span></li>
+    <li><span>Centro: <b>260</b> · Atribuição: <b>970</b></span></li>
+    <li><span>Salvar como <code>Zcra.csv</code> e usar para puxar as informações das carretas no PCA</span></li>
+  </ol>
+  <div class="callout green"><span class="ci">🔐</span><p>Acessos (Telnet, Wi-Fi, logins) foram propositalmente deixados de fora desta página. Guarde-os em um gerenciador de senhas.</p></div></div></details>
+
+  
+</div>
+<script src="util.js"></script>
+<script>
+const q2=document.getElementById("pq2");
+const norm=t=>t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+function filtra(){
+  const q=norm(q2.value.trim());let n=0;
+  document.querySelectorAll("details[data-s]").forEach(d=>{
+    const ok=!q||norm(d.dataset.s+" "+d.textContent).includes(q);
+    d.classList.toggle("hidden",!ok);if(ok)n++;
+    if(q&&ok)d.open=true;
+  });
+  document.getElementById("vazio").classList.toggle("hidden",n>0);
+}
+q2.addEventListener("input",filtra);
+function abreHash(){
+  const id=location.hash.slice(1);if(!id)return;
+  const d=document.getElementById(id);
+  if(d&&d.tagName==="DETAILS"){d.open=true;setTimeout(()=>d.scrollIntoView({block:"start"}),50)}
+}
+window.addEventListener("hashchange",abreHash);abreHash();
+</script>
+</body>
+</html>

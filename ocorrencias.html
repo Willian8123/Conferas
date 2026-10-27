@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#37352f">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<title>Ocorrências</title>
+<link rel="stylesheet" href="ocorr.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Início</a>
+  <div class="ico">📨</div>
+  <h1>Ocorrências</h1>
+  <p class="sub">Registre problemas com carretas e envie com fotos e vídeos direto para a fábrica.</p>
+
+  <div class="menu">
+    <a class="item" href="chamado.html">
+      <span class="e">🚨</span>
+      <div><b>Abrir chamado</b><span>Registrar a ocorrência e enviar por e-mail</span></div>
+      <span class="go">›</span>
+    </a>
+    <a class="item" href="fabricas.html">
+      <span class="e">🏭</span>
+      <div><b>Cadastro de fábricas</b><span id="cnt">Nome e e-mail de cada fábrica</span></div>
+      <span class="go">›</span>
+    </a>
+  </div>
+</div>
+<script src="ocorr.js"></script>
+<script>
+  const n = Ocorr.load().length;
+  document.getElementById("cnt").textContent =
+    n === 0 ? "Nenhuma fábrica cadastrada ainda" : n + (n === 1 ? " fábrica cadastrada" : " fábricas cadastradas");
+</script>
+</body>
+</html>

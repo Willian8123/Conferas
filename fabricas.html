@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#37352f">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<title>Cadastro de fábricas</title>
+<link rel="stylesheet" href="ocorr.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="ocorrencias.html">← Ocorrências</a>
+  <div class="ico">🏭</div>
+  <h1>Cadastro de fábricas</h1>
+  <p class="sub">Cadastre quantas fábricas quiser, a qualquer momento. Elas ficam salvas neste aparelho.</p>
+
+  <div class="sec" id="formTitulo">Nova fábrica</div>
+  <form id="f" novalidate>
+    <div class="field" id="fNome">
+      <label for="nome">Nome da fábrica</label>
+      <input id="nome" type="text" autocomplete="off" placeholder="Ex.: Jacareí">
+    </div>
+    <div class="field" id="fEmail" style="margin-top:12px">
+      <label for="email">E-mail</label>
+      <input id="email" type="email" inputmode="email" autocomplete="off" autocapitalize="none" placeholder="exemplo@empresa.com.br">
+      <span class="hint">Para mais de um destinatário, separe por vírgula.</span>
+    </div>
+    <div class="callout red hidden" id="erro"><p id="erroTxt"></p></div>
+    <div class="row">
+      <button class="btn primary" type="submit" id="salvar">Salvar fábrica</button>
+      <button class="btn hidden" type="button" id="cancelar">Cancelar edição</button>
+    </div>
+  </form>
+
+  <div class="sec">Fábricas cadastradas <small id="total"></small></div>
+  <div class="list" id="lista"></div>
+
+  <div class="sec">Backup</div>
+  <div class="callout blue"><p>Os dados ficam só neste celular. Se você limpar os dados do navegador ou reinstalar o app, eles são apagados. Exporte um backup de vez em quando.</p></div>
+  <div class="row">
+    <button class="btn" type="button" id="exp">⬇️ Exportar backup</button>
+    <button class="btn" type="button" id="impBtn">⬆️ Importar backup</button>
+    <input type="file" id="imp" accept=".json,application/json" class="hidden">
+  </div>
+  <div class="callout green hidden" id="okBk"><p id="okBkTxt"></p></div>
+</div>
+
+<script src="ocorr.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let editId = null;
+
+  function mostrarErro(msg, campo) {
+    $("erroTxt").textContent = msg;
+    $("erro").classList.remove("hidden");
+    $("fNome").classList.toggle("err", campo === "nome");
+    $("fEmail").classList.toggle("err", campo === "email");
+  }
+  function limparErro() {
+    $("erro").classList.add("hidden");
+    $("fNome").classList.remove("err");
+    $("fEmail").classList.remove("err");
+  }
+  function resetForm() {
+    editId = null;
+    $("nome").value = "";
+    $("email").value = "";
+    $("formTitulo").textContent = "Nova fábrica";
+    $("salvar").textContent = "Salvar fábrica";
+    $("cancelar").classList.add("hidden");
+    limparErro();
+  }
+
+  function render() {
+    const l = Ocorr.load();
+    $("total").textContent = l.length ? l.length + (l.length === 1 ? " cadastrada" : " cadastradas") : "";
+    if (!l.length) {
+      $("lista").innerHTML = '<div class="empty">Nenhuma fábrica cadastrada ainda.</div>';
+      return;
+    }
+    $("lista").innerHTML = l.map((f) => `
+      <div class="li">
+        <div class="t"><b>${Ocorr.esc(f.nome)}</b><span>${Ocorr.esc(f.email)}</span></div>
+        <button class="btn" data-a="edit" data-id="${Ocorr.esc(f.id)}">Editar</button>
+        <button class="btn danger" data-a="del" data-id="${Ocorr.esc(f.id)}">Excluir</button>
+      </div>`).join("");
+  }
+
+  $("f").addEventListener("submit", (e) => {
+    e.preventDefault();
+    limparErro();
+    const nome = $("nome").value.trim().replace(/\s+/g, " ");
+    const em = Ocorr.parseEmails($("email").value);
+    if (!nome) return mostrarErro("Informe o nome da fábrica.", "nome");
+    if (!em.ok) return mostrarErro("Informe um e-mail válido (ex.: nome@empresa.com.br).", "email");
+
+    const l = Ocorr.load();
+    const dup = l.find((f) => f.nome.toLowerCase() === nome.toLowerCase() && f.id !== editId);
+    if (dup) return mostrarErro("Já existe uma fábrica com esse nome. Use Editar para alterar.", "nome");
+
+    if (editId) {
+      const f = l.find((x) => x.id === editId);
+      if (f) { f.nome = nome; f.email = em.list.join(", "); }
+    } else {
+      l.push({ id: String(Date.now()) + Math.random().toString(36).slice(2, 6), nome, email: em.list.join(", ") });
+    }
+    if (!Ocorr.save(l)) return mostrarErro("Não consegui salvar neste navegador (armazenamento bloqueado).");
+    resetForm();
+    render();
+  });
+
+  $("cancelar").addEventListener("click", resetForm);
+
+  $("lista").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-a]");
+    if (!b) return;
+    const l = Ocorr.load();
+    const f = l.find((x) => x.id === b.dataset.id);
+    if (!f) return;
+    if (b.dataset.a === "edit") {
+      editId = f.id;
+      $("nome").value = f.nome;
+      $("email").value = f.email;
+      $("formTitulo").textContent = "Editar fábrica";
+      $("salvar").textContent = "Salvar alterações";
+      $("cancelar").classList.remove("hidden");
+      limparErro();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      $("nome").focus();
+    } else if (confirm('Excluir a fábrica "' + f.nome + '"?')) {
+      Ocorr.save(l.filter((x) => x.id !== f.id));
+      if (editId === f.id) resetForm();
+      render();
+    }
+  });
+
+  // Backup
+  $("exp").addEventListener("click", () => {
+    const dados = JSON.stringify(Ocorr.load().map(({ nome, email }) => ({ nome, email })), null, 2);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([dados], { type: "application/json" }));
+    a.download = "fabricas-backup.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+  $("impBtn").addEventListener("click", () => $("imp").click());
+  $("imp").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const arr = JSON.parse(await file.text());
+      if (!Array.isArray(arr)) throw new Error();
+      const l = Ocorr.load();
+      let n = 0;
+      arr.forEach((x) => {
+        const nome = String(x && x.nome || "").trim();
+        const em = Ocorr.parseEmails(x && x.email);
+        if (!nome || !em.ok) return;
+        const ex = l.find((f) => f.nome.toLowerCase() === nome.toLowerCase());
+        if (ex) ex.email = em.list.join(", ");
+        else l.push({ id: String(Date.now()) + Math.random().toString(36).slice(2, 6), nome, email: em.list.join(", ") });
+        n++;
+      });
+      Ocorr.save(l);
+      render();
+      $("okBkTxt").textContent = n + " fábrica(s) importada(s).";
+      $("okBk").classList.remove("hidden");
+    } catch (err) {
+      $("okBkTxt").textContent = "Arquivo inválido. Use um backup exportado por este app.";
+      $("okBk").classList.remove("hidden");
+    }
+  });
+
+  render();
+</script>
+</body>
+</html>

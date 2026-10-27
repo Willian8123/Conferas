@@ -1,10 +1,16 @@
 // Service worker: deixa o app funcionar offline.
 // Ao alterar qualquer arquivo, aumente a versão abaixo para o celular atualizar.
-const VERSION = "rotinas-v4";
+const VERSION = "rotinas-v5";
 const FILES = [
   "./",
   "./index.html",
   "./manifest.json",
+  "./ocorrencias.html",
+  "./chamado.html",
+  "./fabricas.html",
+  "./ocorr.css",
+  "./ocorr.js",
+  "./config.js",
   "./icon-192.png",
   "./icon-512.png",
   "./icon-maskable-512.png"

@@ -124,6 +124,11 @@ details .body{padding:4px 10px 10px 30px}
 .prod mark{background:var(--yellow);color:var(--yellow-t);border-radius:2px;padding:0 1px}
 .prod.ok .code{background:#2eaadc;color:#fff}
 .pmore{margin:10px 0}
+
+details.bigsec{margin:44px 0 6px}
+details.bigsec>summary{font-size:26px;font-weight:600;border-bottom:1px solid var(--border);border-radius:0;padding:0 0 6px}
+details.bigsec>summary::before{width:22px;font-size:20px}
+details.bigsec .body{padding:8px 0 0}
 </style>
 </head>
 <body>
@@ -178,12 +183,16 @@ details .body{padding:4px 10px 10px 30px}
     <a class="card" href="#controle"><div class="e">🏷️</div><b>Controle</b><span>Etiquetas, PCF, mapa negativo</span></a>
   </div>
 
-  <h2 id="produtos">🔎 Produtos (código Promax)</h2>
+  <details id="produtos" class="bigsec">
+  <summary>🔎 Produtos (código Promax)</summary>
+  <div class="body">
   <p class="sub">Digite o <b>código</b> para ver o nome, ou o <b>nome</b> (ou parte dele) para achar o código. Toque na linha para copiar o código.</p>
   <div class="pbox"><input id="pq" class="search" type="search" inputmode="search" autocomplete="off" placeholder="Ex.: 2538  ·  pilsen 600  ·  guarana 2l"></div>
   <div class="pmeta" id="pmeta"></div>
   <div id="plist"></div>
   <button class="btn pmore hidden" id="pmore">Mostrar mais</button>
+  </div>
+  </details>
 
   <h2 id="rotinas">🗂️ Todas as rotinas</h2>
   <p class="sub">Banco de dados unificado: uma rotina que aparece em mais de um fluxo foi consolidada em uma linha só.</p>
@@ -458,7 +467,7 @@ function pbuscar(){
   const q=norm(pq.value.trim());
   ptoks=q.split(/\s+/).filter(Boolean);
   pshow=60;
-  if(!ptoks.length){pres=P.map((_,i)=>i);prender();return}
+  if(!ptoks.length){pres=[];plist.innerHTML="";pmore.classList.add("hidden");pmeta.textContent=P.length+" produtos cadastrados. Digite para buscar.";return}
   pres=[];
   P.forEach((p,i)=>{
     const ok=ptoks.every(t=>PN[i].includes(t)||p[0].startsWith(t)||(/^\d{3,}$/.test(t)&&p[0].includes(t)));
@@ -481,6 +490,11 @@ plist.addEventListener("click",e=>{
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,done)}else done();
 });
 pbuscar();
+
+const pdet=document.getElementById("produtos");
+function abrirProdutos(){pdet.open=true;setTimeout(()=>{pdet.scrollIntoView({block:"start"});pq.focus()},60)}
+document.querySelectorAll('a[href="#produtos"]').forEach(a=>a.addEventListener("click",e=>{e.preventDefault();abrirProdutos()}));
+pdet.addEventListener("toggle",()=>{if(pdet.open)pq.focus()});
 
 const items=[
  "Conferir status dos veículos (03.11.10)",

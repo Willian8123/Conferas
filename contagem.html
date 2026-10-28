@@ -226,7 +226,7 @@ async function gerarPdf(r) {
   }
   function novaPagina() { page = doc.addPage([W, H]); y = H - M; }
   novaPagina();
-  const LOGO_H = 42;
+  const LOGO_H = 36;
   try {
     const resp = await fetch("logo-ambev.png");
     if (resp.ok) {
@@ -272,13 +272,6 @@ async function gerarPdf(r) {
     page.drawLine({ start: { x: M, y: y - altura }, end: { x: W - M, y: y - altura }, thickness: 0.5, color: linha });
     y -= altura;
   });
-  // linha de totais
-  if (y - 34 < 50) { novaPagina(); }
-  const tot = totaisRelatorio(r);
-  y -= 6;
-  page.drawRectangle({ x: M, y: y - 24, width: W - 2 * M, height: 26, color: rgb(0.9, 0.9, 0.88) });
-  page.drawText("TOTAIS", { x: M + 4, y: y - 16, size: 10, font: fb });
-  ORDEM.forEach((t) => centro(page, limpo(fmt(tot[t])), fb, 12, cols[t], y - 17));
   const pags = doc.getPages();
   pags.forEach((pg, i) => {
     const t = limpo("Recontagem - página " + (i + 1) + " de " + pags.length);

@@ -66,3 +66,20 @@
 .acoes{display:grid;gap:10px;margin-top:12px}
 .acoes .btn{width:100%;padding:13px}
 @media (min-width:600px){.acoes{grid-template-columns:1fr 1fr}.acoes .full{grid-column:1/-1}}
+
+/* ---- Recontagem: três campos por produto ---- */
+.pc .resu{margin:8px 0 2px;font-size:14px;color:var(--muted)}
+.pc .resu b{color:var(--text)}
+.tq{margin-top:12px}
+.tq label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:4px}
+.tq .r{display:flex;gap:8px;align-items:center}
+.tq .qi{flex:1;min-width:0;font:inherit;font-size:18px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);padding:10px 12px}
+.tq .qi:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.tq .qi.bad{border-color:#e03e3e}
+.tq .plus{flex:none;width:46px;height:46px;border:1px solid var(--border);background:var(--callout);color:var(--text);border-radius:8px;font-size:20px;line-height:1;cursor:pointer}
+.tq .plus:active{background:var(--bg-hover)}
+.tq .eq{flex:none;min-width:64px;font-size:15px;white-space:nowrap;text-align:right}
+.tq .eq b{font-size:20px}
+.resumo .it .l1b{display:flex;gap:14px;flex-wrap:wrap;margin-top:4px;font-size:14px}
+.resumo .it .l1b .vz{color:var(--muted)}
+.resumo .it.tt2{background:var(--callout)}

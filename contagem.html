@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#37352f">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
-<title>Contagem de estoque</title>
+<title>Recontagem</title>
 <link rel="stylesheet" href="ocorr.css">
 <link rel="stylesheet" href="paginas.css">
 <link rel="stylesheet" href="contagem.css">
@@ -46,15 +46,44 @@ function aviso(msg) {
   clearTimeout(toastT);
   toastT = setTimeout(() => t.classList.add("hidden"), 3200);
 }
+const plural = (n, s, p) => (n === 1 ? s : p);
 
 /* ================= armazenamento ================= */
-const K = { atual: "contagem_atual_v1", hist: "contagem_hist_v1", fat: "contagem_fatores_v1", nome: "contagem_contador_v1" };
+const K = { atual: "contagem_atual_v1", hist: "contagem_hist_v1", nome: "contagem_contador_v1" };
 function ler(k, def) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? def : v; } catch (e) { return def; } }
 function gravar(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+
+/* Tipos contados: cada um é uma soma digitada (ex.: 15+20+12). Não há conversão entre eles. */
+const ORDEM = ["pallet", "lastro", "cx"];
+const ROT = { pallet: "Pallets", lastro: "Lastros", cx: "Caixas" };
+const ROT1 = { pallet: ["pallet", "pallets"], lastro: ["lastro", "lastros"], cx: ["caixa", "caixas"] };
+
+// Dados salvos pela versão anterior (linhas com fator) viram os três campos novos.
+function migrarItem(it) {
+  if (it.q && typeof it.q === "object") return it;
+  const q = { pallet: [], lastro: [], cx: [] };
+  (it.linhas || []).forEach((l) => {
+    const v = String(l && l.q || "").trim();
+    if (l && q[l.tipo] && v) q[l.tipo].push(v);
+  });
+  it.q = { pallet: q.pallet.join("+"), lastro: q.lastro.join("+"), cx: q.cx.join("+") };
+  delete it.linhas;
+  return it;
+}
+function migrarHist(h) {
+  if (!h || !Array.isArray(h.itens)) return null;
+  h.itens = h.itens.map((it) => {
+    if (it && it.linhas) {
+      return { cod: it.cod, nome: it.nome, pallet: null, lastro: null, cx: { t: it.total, e: (it.linhas || []).map((l) => l.det).join(" + ") } };
+    }
+    return it;
+  });
+  return h;
+}
 let atual = ler(K.atual, null);
 if (atual && !Array.isArray(atual.itens)) atual = null;
-let hist = ler(K.hist, []);
-let fatores = ler(K.fat, {});
+if (atual) atual.itens.forEach(migrarItem);
+let hist = ler(K.hist, []).map(migrarHist).filter(Boolean);
 let contador = ler(K.nome, "");
 const salvarAtual = () => gravar(K.atual, atual);
 
@@ -78,6 +107,7 @@ function buscarProdutos(q) {
 
 /* ================= cálculo ================= */
 // Calculadora segura: aceita números e + - * x / ( ), com vírgula ou ponto decimal.
+// Vazio -> null; expressão inválida -> NaN.
 function calc(txt) {
   const s = String(txt == null ? "" : txt).toLowerCase().replace(/\s+/g, "").replace(/,/g, ".").replace(/[x×]/g, "*");
   if (!s) return null;
@@ -100,69 +130,56 @@ function calc(txt) {
     return Math.round(v * 100) / 100;
   } catch (e) { return NaN; }
 }
-const TIPOS = {
-  cx: { rot: "Caixas", un: "caixas" },
-  pallet: { rot: "Pallets", un: "cx/pallet" },
-  lastro: { rot: "Lastros", un: "cx/lastro" }
-};
-function totalLinha(l) {
-  const q = calc(l.q);
-  if (q == null || isNaN(q)) return null;
-  if (l.tipo === "cx") return q;
-  const f = calc(l.f);
-  if (f == null || isNaN(f)) return null;
-  return Math.round(q * f * 100) / 100;
+// "15+20+12" -> "15 + 20 + 12"; número simples não tem detalhe.
+function exprExib(txt) {
+  const s = String(txt || "").replace(/\s+/g, "");
+  if (!s || /^[\d.,]+$/.test(s)) return "";
+  return s.replace(/([+*/x×-])/g, " $1 ").replace(/\s+/g, " ").trim();
 }
-const totalItem = (it) => it.linhas.reduce((s, l) => s + (totalLinha(l) || 0), 0);
-const codExib = (it) => (it.custom ? (it.codUser || "") : it.cod);
+const valorTipo = (it, t) => calc(it.q[t]);
+const temDigitado = (it) => ORDEM.some((t) => String(it.q[t] || "").trim());
+const temValido = (it) => ORDEM.some((t) => { const v = valorTipo(it, t); return v != null && !isNaN(v); });
+const temInvalido = (it) => ORDEM.some((t) => isNaN(valorTipo(it, t)));
 let seq = 0;
 const novoId = () => Date.now().toString(36) + (seq++).toString(36) + Math.random().toString(36).slice(2, 5);
-function fatorLembrado(cod, tipo) {
-  const v = fatores[cod] && fatores[cod][tipo];
-  return v ? String(v) : "";
-}
-function aprender(cod, tipo, txt) {
-  const v = calc(txt);
-  if (v != null && !isNaN(v) && v > 0) {
-    fatores[cod] = fatores[cod] || {};
-    fatores[cod][tipo] = v;
-    gravar(K.fat, fatores);
-  }
-}
+const codExib = (it) => (it.custom ? (it.codUser || "") : it.cod);
 
 /* ================= relatório (texto e PDF) ================= */
-function plural(n, s, p) { return n === 1 ? s : p; }
-function detalhe(l) {
-  const q = fmt(calc(l.q));
-  let d;
-  if (l.tipo === "cx") d = q + " cx";
-  else {
-    const qn = calc(l.q);
-    d = q + " " + (l.tipo === "pallet" ? plural(qn, "pallet", "pallets") : plural(qn, "lastro", "lastros")) + " x " + fmt(calc(l.f)) + " cx";
-  }
-  if (l.loc && l.loc.trim()) d += " (" + l.loc.trim() + ")";
-  return d;
+function celula(it, t) {
+  const v = valorTipo(it, t);
+  if (v == null || isNaN(v)) return null;
+  return { t: v, e: exprExib(it.q[t]) };
 }
-// Foto fixa do que será enviado: só produtos com ao menos uma linha válida.
+// Foto fixa do que será enviado: só produtos com ao menos um tipo válido.
 function montarRelatorio(c) {
   const itens = [];
   c.itens.forEach((it) => {
-    const ls = it.linhas.filter((l) => totalLinha(l) != null);
-    if (!ls.length) return;
-    itens.push({
-      cod: codExib(it), nome: it.nome,
-      total: Math.round(ls.reduce((s, l) => s + totalLinha(l), 0) * 100) / 100,
-      linhas: ls.map((l) => ({ det: detalhe(l), total: totalLinha(l) }))
-    });
+    if (!temValido(it)) return;
+    itens.push({ cod: codExib(it), nome: it.nome, pallet: celula(it, "pallet"), lastro: celula(it, "lastro"), cx: celula(it, "cx") });
   });
   return { id: c.id, inicio: c.inicio, fim: c.fim || new Date().toISOString(), contador: c.contador || contador || "", setor: c.setor || "", itens };
 }
+function totaisRelatorio(r) {
+  const tot = { pallet: 0, lastro: 0, cx: 0 };
+  r.itens.forEach((i) => ORDEM.forEach((t) => { if (i[t]) tot[t] += i[t].t; }));
+  ORDEM.forEach((t) => { tot[t] = Math.round(tot[t] * 100) / 100; });
+  return tot;
+}
+function resumoLinha(i) {
+  return ORDEM.filter((t) => i[t]).map((t) => fmt(i[t].t) + " " + ROT1[t][i[t].t === 1 ? 0 : 1]).join(" · ");
+}
 function textoRelatorio(r) {
-  let t = "*CONTAGEM DE ESTOQUE*\n" + dataBR(r.fim);
+  let t = "*RECONTAGEM*\n" + dataBR(r.fim);
   if (r.contador) t += " | Contado por: " + r.contador;
   if (r.setor) t += " | Setor: " + r.setor;
   t += "\n\n";
-  r.itens.forEach((i) => { t += (i.cod ? i.cod + " - " : "") + i.nome + ": " + fmt(i.total) + " cx\n"; });
+  r.itens.forEach((i) => {
+    t += (i.cod ? i.cod + " - " : "") + i.nome + "\n   " + ORDEM.filter((x) => i[x]).map((x) => {
+      return ROT[x] + ": " + fmt(i[x].t);
+    }).join(" | ") + "\n";
+  });
+  const tot = totaisRelatorio(r);
+  t += "\n*Totais:* " + ORDEM.map((x) => ROT[x] + " " + fmt(tot[x])).join(" | ");
   t += "\n" + r.itens.length + " " + plural(r.itens.length, "produto contado", "produtos contados");
   return t;
 }
@@ -173,17 +190,17 @@ async function gerarPdf(r) {
   const fb = await doc.embedFont(StandardFonts.HelveticaBold);
   const suportado = new Set(f.getCharacterSet());
   const limpo = (s) => Array.from(String(s)).map((ch) => (suportado.has(ch.codePointAt(0)) ? ch : "?")).join("");
-  const W = 595.28, H = 841.89, M = 40, FS = 9.5, LEAD = 12.5, PAD = 5;
-  const cod = { x: M, w: 48 }, nome = { x: 92, w: 205 }, tot = { x: 303, w: 58 }, det = { x: 372, w: 183 };
+  const W = 595.28, H = 841.89, M = 40, FS = 9.5, LEAD = 12.5, PAD = 6;
+  const cod = { x: M, w: 46 }, nome = { x: 90, w: 160 };
+  const cols = { pallet: { x: 255, w: 100 }, lastro: { x: 355, w: 100 }, cx: { x: 455, w: 100 } };
   const cinza = rgb(0.45, 0.45, 0.45), linha = rgb(0.85, 0.85, 0.85), zebra = rgb(0.965, 0.965, 0.955);
   function quebra(txt, fonte, tam, larg) {
     const palavras = limpo(txt).split(/\s+/).filter(Boolean);
     const out = []; let cur = "";
     palavras.forEach((w) => {
-      let tentativa = cur ? cur + " " + w : w;
+      const tentativa = cur ? cur + " " + w : w;
       if (fonte.widthOfTextAtSize(tentativa, tam) <= larg) { cur = tentativa; return; }
       if (cur) out.push(cur);
-      // palavra maior que a coluna: corta
       while (fonte.widthOfTextAtSize(w, tam) > larg) {
         let k = w.length;
         while (k > 1 && fonte.widthOfTextAtSize(w.slice(0, k), tam) > larg) k--;
@@ -194,51 +211,69 @@ async function gerarPdf(r) {
     if (cur) out.push(cur);
     return out.length ? out : [""];
   }
+  const centro = (page, txt, fonte, tam, c, yy, cor) => {
+    const w = fonte.widthOfTextAtSize(txt, tam);
+    page.drawText(txt, { x: c.x + (c.w - w) / 2, y: yy, size: tam, font: fonte, color: cor });
+  };
   let page, y;
   function cabecalhoTabela() {
     page.drawRectangle({ x: M, y: y - 18, width: W - 2 * M, height: 20, color: rgb(0.9, 0.9, 0.88) });
     const ty = y - 12;
     page.drawText("Cód.", { x: cod.x + 4, y: ty, size: 9, font: fb });
     page.drawText("Produto", { x: nome.x, y: ty, size: 9, font: fb });
-    const tw = fb.widthOfTextAtSize("Total (cx)", 9);
-    page.drawText("Total (cx)", { x: tot.x + tot.w - tw, y: ty, size: 9, font: fb });
-    page.drawText("Detalhe", { x: det.x, y: ty, size: 9, font: fb });
+    ORDEM.forEach((t) => centro(page, ROT[t], fb, 9, cols[t], ty));
     y -= 22;
   }
   function novaPagina() { page = doc.addPage([W, H]); y = H - M; }
   novaPagina();
-  page.drawText("Contagem de estoque", { x: M, y: y - 16, size: 20, font: fb });
+  page.drawText("Recontagem", { x: M, y: y - 16, size: 20, font: fb });
   y -= 34;
   const info = [["Data", dataBR(r.fim)]];
   if (r.contador) info.push(["Contado por", r.contador]);
   if (r.setor) info.push(["Setor", r.setor]);
   info.push(["Produtos contados", String(r.itens.length)]);
   info.forEach(([k, v]) => {
-    page.drawText(limpo(k + ": "), { x: M, y: y - 10, size: 10, font: fb });
-    page.drawText(limpo(v), { x: M + fb.widthOfTextAtSize(limpo(k + ": "), 10), y: y - 10, size: 10, font: f });
+    const kk = limpo(k + ": ");
+    page.drawText(kk, { x: M, y: y - 10, size: 10, font: fb });
+    page.drawText(limpo(v), { x: M + fb.widthOfTextAtSize(kk, 10), y: y - 10, size: 10, font: f });
     y -= 15;
   });
   y -= 10;
   cabecalhoTabela();
   r.itens.forEach((it, idx) => {
     const ln = quebra(it.nome, f, FS, nome.w);
-    const dl = quebra(it.linhas.map((l) => l.det).join(" + "), f, FS, det.w);
-    const altura = Math.max(ln.length, dl.length) * LEAD + 2 * PAD;
-    if (y - altura < 55) { novaPagina(); cabecalhoTabela(); }
+    const ex = {};
+    let altCel = 0;
+    ORDEM.forEach((t) => {
+      ex[t] = [];
+      altCel = Math.max(altCel, it[t] ? 14 : 0);
+    });
+    const altura = Math.max(ln.length * LEAD, altCel) + 2 * PAD;
+    if (y - altura < 80) { novaPagina(); cabecalhoTabela(); }
     if (idx % 2 === 1) page.drawRectangle({ x: M, y: y - altura, width: W - 2 * M, height: altura, color: zebra });
-    let ty = y - PAD - FS;
+    const ty = y - PAD - FS;
     if (it.cod) page.drawText(limpo(it.cod), { x: cod.x + 4, y: ty, size: FS, font: f });
     ln.forEach((t, k) => page.drawText(t, { x: nome.x, y: ty - k * LEAD, size: FS, font: f }));
-    const ts = limpo(fmt(it.total));
-    page.drawText(ts, { x: tot.x + tot.w - fb.widthOfTextAtSize(ts, 11), y: ty, size: 11, font: fb });
-    dl.forEach((t, k) => page.drawText(t, { x: det.x, y: ty - k * LEAD, size: FS, font: f, color: cinza }));
+    ORDEM.forEach((t) => {
+      const c = it[t];
+      if (!c) { centro(page, "-", f, 11, cols[t], ty, cinza); return; }
+      centro(page, limpo(fmt(c.t)), fb, 12, cols[t], ty - 1);
+      ex[t].forEach((e, k) => centro(page, e, f, 7.5, cols[t], ty - 12 - k * 10, cinza));
+    });
     page.drawLine({ start: { x: M, y: y - altura }, end: { x: W - M, y: y - altura }, thickness: 0.5, color: linha });
     y -= altura;
   });
+  // linha de totais
+  if (y - 34 < 50) { novaPagina(); }
+  const tot = totaisRelatorio(r);
+  y -= 6;
+  page.drawRectangle({ x: M, y: y - 24, width: W - 2 * M, height: 26, color: rgb(0.9, 0.9, 0.88) });
+  page.drawText("TOTAIS", { x: M + 4, y: y - 16, size: 10, font: fb });
+  ORDEM.forEach((t) => centro(page, limpo(fmt(tot[t])), fb, 12, cols[t], y - 17));
   const pags = doc.getPages();
   pags.forEach((pg, i) => {
-    const t = "Contagem de estoque - página " + (i + 1) + " de " + pags.length;
-    pg.drawText(limpo(t), { x: W / 2 - f.widthOfTextAtSize(limpo(t), 8) / 2, y: 26, size: 8, font: f, color: cinza });
+    const t = limpo("Recontagem - página " + (i + 1) + " de " + pags.length);
+    pg.drawText(t, { x: W / 2 - f.widthOfTextAtSize(t, 8) / 2, y: 26, size: 8, font: f, color: cinza });
   });
   return await doc.save();
 }
@@ -255,12 +290,12 @@ function baixar(blob, nomeArq) {
 async function enviarPdf(r, soBaixar) {
   const bytes = await gerarPdf(r);
   const blob = new Blob([bytes], { type: "application/pdf" });
-  const nomeArq = "contagem-" + stamp(r.fim) + ".pdf";
+  const nomeArq = "recontagem-" + stamp(r.fim) + ".pdf";
   if (!soBaixar && navigator.canShare && navigator.share) {
     const file = new File([blob], nomeArq, { type: "application/pdf" });
     if (navigator.canShare({ files: [file] })) {
       try {
-        await navigator.share({ files: [file], title: "Contagem de estoque" });
+        await navigator.share({ files: [file], title: "Recontagem" });
         return "compartilhado";
       } catch (e) {
         if (e && e.name === "AbortError") return "cancelado";
@@ -290,33 +325,33 @@ function render() {
   $("#fixa").classList.add("hidden");
   barraAcao = null;
   const back = $("#back");
-  if (r === "/buscar") { back.textContent = "← Contagem"; back.href = atual.itens.length ? "#/contar" : "#/"; vBuscar(); }
+  if (r === "/buscar") { back.textContent = "← Recontagem"; back.href = atual.itens.length ? "#/contar" : "#/"; vBuscar(); }
   else if (r === "/contar") { back.textContent = "← Escolher produtos"; back.href = "#/buscar"; vContar(); }
   else if (r === "/enviar") { back.textContent = "← Quantidades"; back.href = "#/contar"; vEnviar(); }
   else { back.textContent = "← Menu"; back.href = "index.html"; vInicio(); }
   window.scrollTo(0, 0);
 }
 window.addEventListener("hashchange", render);
+function ir(p) { location.hash = "#" + p; }
 
 /* ================= tela: início ================= */
 function vInicio() {
-  let h = '<div class="ico">🧮</div><h1>Contagem de estoque</h1><p class="sub">Marque os produtos, lance as quantidades e envie o PDF para o grupo.</p>';
+  let h = '<div class="ico">🧮</div><h1>Recontagem</h1><p class="sub">Marque os produtos, lance pallets, lastros e caixas e envie o PDF para o grupo.</p>';
   if (atual && atual.itens.length) {
-    h += `<div class="callout blue"><p><b>Contagem em andamento</b><br>${atual.itens.length} ${plural(atual.itens.length, "produto", "produtos")} · iniciada em ${dataBR(atual.inicio)}</p></div>
-      <div class="row"><button class="btn primary" data-a="continuar">Continuar contagem</button><button class="btn danger" data-a="descartar">Descartar</button></div>`;
+    h += `<div class="callout blue"><p><b>Recontagem em andamento</b><br>${atual.itens.length} ${plural(atual.itens.length, "produto", "produtos")} · iniciada em ${dataBR(atual.inicio)}</p></div>
+      <div class="row"><button class="btn primary" data-a="continuar">Continuar recontagem</button><button class="btn danger" data-a="descartar">Descartar</button></div>`;
   } else {
-    h += '<div class="row"><button class="btn primary big" data-a="nova">➕ Nova contagem</button></div>';
+    h += '<div class="row"><button class="btn primary big" data-a="nova">➕ Nova recontagem</button></div>';
   }
-  h += '<div class="sec">Contagens anteriores</div>';
-  if (!hist.length) h += '<div class="list"><div class="empty">Nenhuma contagem concluída ainda.</div></div>';
+  h += '<div class="sec">Recontagens anteriores</div>';
+  if (!hist.length) h += '<div class="list"><div class="empty">Nenhuma recontagem concluída ainda.</div></div>';
   else {
     h += '<div class="list hist">' + hist.map((c) => `
       <div class="li"><div class="t"><b>${dataBR(c.fim)}</b><span>${c.itens.length} ${plural(c.itens.length, "produto", "produtos")}${c.contador ? " · " + esc(c.contador) : ""}${c.setor ? " · " + esc(c.setor) : ""}</span></div>
       <button class="btn" data-a="hpdf" data-h="${esc(c.id)}">📄 PDF</button><button class="btn danger" data-a="hdel" data-h="${esc(c.id)}">Excluir</button></div>`).join("") + "</div>";
   }
-  const nf = Object.keys(fatores).length;
   h += `<div class="sec">Dados do app</div>
-    <div class="callout"><p>O app já lembra as <b>caixas por pallet/lastro</b> de <b>${nf}</b> ${plural(nf, "produto", "produtos")}. Esses dados e o histórico ficam só neste aparelho: reinstalar o app ou limpar os dados do navegador apaga tudo. Faça um backup de vez em quando.</p></div>
+    <div class="callout"><p>O histórico fica só neste aparelho: reinstalar o app ou limpar os dados do navegador apaga tudo. Faça um backup de vez em quando.</p></div>
     <div class="row"><button class="btn" data-a="exp">⬇️ Exportar backup</button><button class="btn" data-a="impBtn">⬆️ Importar backup</button><input type="file" id="imp" accept=".json,application/json" class="hidden"></div>`;
   view.innerHTML = h;
 }
@@ -333,7 +368,7 @@ function vBuscar() {
     <details class="novo"><summary>+ Produto que não está na lista</summary>
       <div class="grid"><div class="field"><label for="nn">Nome do produto</label><input id="nn" type="text" autocomplete="off"></div>
       <div class="field"><label for="nc">Código (opcional)</label><input id="nc" type="text" autocomplete="off" inputmode="numeric"></div></div>
-      <div class="row"><button class="btn" id="nadd" type="button">Adicionar à contagem</button></div></details>`;
+      <div class="row"><button class="btn" id="nadd" type="button">Adicionar à recontagem</button></div></details>`;
   atualizarBusca();
 }
 function atualizarChips() {
@@ -371,35 +406,37 @@ function alternar(cod) {
   const idx = atual.itens.findIndex((i) => i.cod === cod);
   if (idx >= 0) {
     const it = atual.itens[idx];
-    if (it.linhas.some((l) => l.q || l.f) && !confirm("Remover " + it.nome + " e as quantidades já lançadas?")) return false;
+    if (temDigitado(it) && !confirm("Remover " + it.nome + " e as quantidades já lançadas?")) return false;
     atual.itens.splice(idx, 1);
-  } else atual.itens.push({ cod, nome: NOME.get(cod) || cod, linhas: [] });
+  } else atual.itens.push({ cod, nome: NOME.get(cod) || cod, q: { pallet: "", lastro: "", cx: "" } });
   salvarAtual();
   return true;
 }
 
 /* ================= tela: quantidades ================= */
-function linhaHtml(l) {
-  const t = TIPOS[l.tipo];
-  const qBad = l.q && isNaN(calc(l.q));
-  const fBad = l.f && isNaN(calc(l.f));
-  return `<div class="ln" data-l="${l.id}">
-    <div class="r1"><select class="tp" aria-label="Tipo">${Object.keys(TIPOS).map((k) => `<option value="${k}" ${k === l.tipo ? "selected" : ""}>${TIPOS[k].rot}</option>`).join("")}</select>
-      <input class="loc" type="text" placeholder="Local (opcional)" value="${esc(l.loc || "")}" autocomplete="off"><button class="rm" type="button" aria-label="Remover linha">🗑️</button></div>
-    <div class="r2"><input class="q ${qBad ? "bad" : ""}" inputmode="tel" autocomplete="off" placeholder="Qtd" aria-label="Quantidade" value="${esc(l.q)}">
-      ${l.tipo !== "cx" ? `<span class="mul">×</span><input class="f ${fBad ? "bad" : ""}" inputmode="tel" autocomplete="off" placeholder="${t.un}" aria-label="${t.un}" value="${esc(l.f)}">` : ``}
-      <span class="eq">= <b>${fmt(totalLinha(l))}</b> cx</span></div></div>`;
+function campoHtml(it, t) {
+  const v = valorTipo(it, t);
+  const ruim = !!String(it.q[t] || "").trim() && isNaN(v);
+  return `<div class="tq"><label>${ROT[t]}</label><div class="r">
+    <input class="qi ${ruim ? "bad" : ""}" data-t="${t}" inputmode="tel" autocomplete="off" placeholder="Ex.: 15+20+12" aria-label="${ROT[t]}" value="${esc(it.q[t])}">
+    <button class="plus" type="button" data-t="${t}" aria-label="Somar mais um valor">＋</button>
+    <span class="eq">= <b>${ruim ? "—" : fmt(v)}</b></span></div></div>`;
+}
+function resumoItem(it) {
+  const partes = ORDEM.filter((t) => { const v = valorTipo(it, t); return v != null && !isNaN(v); })
+    .map((t) => ROT[t] + " <b>" + fmt(valorTipo(it, t)) + "</b>");
+  return partes.length ? partes.join(" · ") : "Sem quantidade ainda";
 }
 function cartaoHtml(it, i) {
   return `<div class="pc" data-i="${i}"><div class="ph"><div class="t"><b>${esc(it.nome)}</b>${codExib(it) ? `<span class="code">${esc(codExib(it))}</span>` : ""}</div>
-    <div class="pt"><span class="n">${fmt(totalItem(it))}</span><small>caixas</small></div><button class="xbtn" type="button" data-a="xitem" aria-label="Remover produto">✕</button></div>
-    ${it.linhas.map(linhaHtml).join("")}
-    <div class="addrow"><button class="btn" type="button" data-add="cx">+ Caixas</button><button class="btn" type="button" data-add="pallet">+ Pallet</button><button class="btn" type="button" data-add="lastro">+ Lastro</button></div></div>`;
+    <button class="xbtn" type="button" data-a="xitem" aria-label="Remover produto">✕</button></div>
+    <div class="resu">${resumoItem(it)}</div>
+    ${ORDEM.map((t) => campoHtml(it, t)).join("")}</div>`;
 }
 function vContar() {
   const n = atual.itens.length;
   let h = `<div class="ico">🧮</div><h1>Quantidades</h1>
-    <p class="sub">Para cada produto, lance caixas, pallets ou lastros. O app soma tudo. O mesmo produto em outro lugar? Use <b>+ nova linha</b> e, se quiser, anote o local.</p>
+    <p class="sub">Digite quantos <b>pallets</b>, <b>lastros</b> e <b>caixas soltas</b> há de cada produto. Para somar vários valores, use o <b>+</b>: <b>15+20+12</b>.</p>
     <div class="row"><a class="btn" href="#/buscar">➕ Adicionar produto</a></div>`;
   h += n ? atual.itens.map(cartaoHtml).join("") : '<div class="empty">Nenhum produto marcado. Toque em “Adicionar produto”.</div>';
   view.innerHTML = h;
@@ -407,46 +444,43 @@ function vContar() {
 }
 function atualizarBarraContar() {
   const n = atual.itens.length;
-  const cont = atual.itens.filter((i) => i.linhas.some((l) => totalLinha(l) != null)).length;
+  const cont = atual.itens.filter(temValido).length;
   barra("<b>" + cont + "</b> de " + n + " com quantidade", "Revisar e enviar →", () => ir("/enviar"), n === 0);
 }
 function atualizarCartao(card) {
   const it = atual.itens[+card.dataset.i];
-  card.querySelectorAll(".ln").forEach((ln) => {
-    const l = it.linhas.find((x) => x.id === ln.dataset.l);
-    if (!l) return;
-    ln.querySelector(".eq b").textContent = fmt(totalLinha(l));
-    const q = ln.querySelector(".q"), f = ln.querySelector(".f");
-    q.classList.toggle("bad", !!l.q && isNaN(calc(l.q)));
-    if (f) f.classList.toggle("bad", !!l.f && isNaN(calc(l.f)));
+  ORDEM.forEach((t) => {
+    const inp = card.querySelector('.qi[data-t="' + t + '"]');
+    const v = valorTipo(it, t);
+    const ruim = !!String(it.q[t] || "").trim() && isNaN(v);
+    inp.classList.toggle("bad", ruim);
+    inp.closest(".r").querySelector(".eq b").textContent = ruim ? "—" : fmt(v);
   });
-  card.querySelector(".pt .n").textContent = fmt(totalItem(it));
+  card.querySelector(".resu").innerHTML = resumoItem(it);
   atualizarBarraContar();
-}
-function adicionarLinha(i, tipo) {
-  const it = atual.itens[i];
-  it.linhas.push({ id: novoId(), tipo, q: "", f: tipo === "cx" ? "" : fatorLembrado(it.cod, tipo), loc: "" });
-  salvarAtual();
-  vContar();
-  const lns = document.querySelectorAll('.pc[data-i="' + i + '"] .ln');
-  const q = lns[lns.length - 1].querySelector(".q");
-  q.scrollIntoView({ block: "center" });
-  q.focus();
 }
 
 /* ================= tela: revisar e enviar ================= */
+function relatorioAtual() {
+  return montarRelatorio({ id: atual.id, inicio: atual.inicio, itens: atual.itens, contador: atual.contador, setor: atual.setor });
+}
 function vEnviar() {
-  const r = montarRelatorio({ id: atual.id, inicio: atual.inicio, itens: atual.itens, contador: atual.contador, setor: atual.setor });
-  const sem = atual.itens.filter((i) => !i.linhas.some((l) => totalLinha(l) != null));
-  const inc = atual.itens.filter((i) => i.linhas.some((l) => (l.q || l.f) && totalLinha(l) == null));
-  let h = `<div class="ico">📤</div><h1>Revisar e enviar</h1><p class="sub">Confira os totais. O PDF segue com o detalhe de cada produto.</p>
+  const r = relatorioAtual();
+  const sem = atual.itens.filter((i) => !temValido(i) && !temInvalido(i));
+  const inc = atual.itens.filter(temInvalido);
+  let h = `<div class="ico">📤</div><h1>Revisar e enviar</h1><p class="sub">Confira os totais. O PDF mostra pallets, lastros e caixas de cada produto, com as somas.</p>
     <div class="grid"><div class="field"><label for="ct">Contado por</label><input id="ct" type="text" autocomplete="name" value="${esc(atual.contador != null ? atual.contador : contador)}" placeholder="Seu nome"></div>
     <div class="field"><label for="st">Setor / local (opcional)</label><input id="st" type="text" autocomplete="off" value="${esc(atual.setor || "")}" placeholder="Ex.: Armazém, Rua A"></div></div>`;
-  if (inc.length) h += `<div class="callout red"><p>⚠️ Linhas incompletas (faltou quantidade ou caixas por pallet/lastro) em: <b>${inc.map((i) => esc(i.nome)).join("; ")}</b>. Elas <b>não entram na soma</b>. Volte e complete.</p></div>`;
-  if (sem.length) h += `<div class="callout yellow"><p>${sem.length} ${plural(sem.length, "produto sem quantidade não entra", "produtos sem quantidade não entram")} no relatório: <b>${sem.map((i) => esc(i.nome)).join("; ")}</b>. Se o estoque for zero, lance <b>0</b> em caixas.</p></div>`;
+  if (inc.length) h += `<div class="callout red"><p>⚠️ Há valores que não consegui somar em: <b>${inc.map((i) => esc(i.nome)).join("; ")}</b>. Esses campos não entram na soma. Volte e corrija (use só números e + - * /).</p></div>`;
+  if (sem.length) h += `<div class="callout yellow"><p>${sem.length} ${plural(sem.length, "produto sem quantidade não entra", "produtos sem quantidade não entram")} no relatório: <b>${sem.map((i) => esc(i.nome)).join("; ")}</b>. Se o estoque for zero, digite <b>0</b>.</p></div>`;
   h += '<div class="sec">Resumo <small>' + r.itens.length + " " + plural(r.itens.length, "produto", "produtos") + "</small></div>";
-  h += r.itens.length ? '<div class="list resumo">' + r.itens.map((i) => `<div class="it ${i.total === 0 ? "zero" : ""}"><div class="l1"><b>${esc(i.nome)}</b><span class="tt">${fmt(i.total)} cx</span></div><div class="l2">${i.cod ? esc(i.cod) + " · " : ""}${esc(i.linhas.map((l) => l.det).join(" + "))}</div></div>`).join("") + "</div>"
-    : '<div class="list"><div class="empty">Nenhuma quantidade lançada ainda.</div></div>';
+  if (r.itens.length) {
+    const tot = totaisRelatorio(r);
+    h += '<div class="list resumo">' + r.itens.map((i) => {
+      const det = "";
+      return `<div class="it"><div class="l1"><b>${esc(i.nome)}</b></div><div class="l1b">${ORDEM.map((t) => `<span class="${i[t] ? "" : "vz"}">${ROT[t]} <b>${i[t] ? fmt(i[t].t) : "—"}</b></span>`).join("")}</div>${det || i.cod ? `<div class="l2">${i.cod ? esc(i.cod) + (det ? " · " : "") : ""}${esc(det)}</div>` : ""}</div>`;
+    }).join("") + `<div class="it tt2"><div class="l1"><b>TOTAIS</b></div><div class="l1b">${ORDEM.map((t) => `<span>${ROT[t]} <b>${fmt(tot[t])}</b></span>`).join("")}</div></div></div>`;
+  } else h += '<div class="list"><div class="empty">Nenhuma quantidade lançada ainda.</div></div>';
   h += `<div class="callout blue"><p>O WhatsApp não deixa o app escolher o grupo sozinho. Ao tocar em <b>Enviar PDF</b>, o celular abre a lista de apps: escolha o WhatsApp e depois o grupo.</p></div>
     <div class="acoes">
       <button class="btn primary full" id="bShare" type="button" ${r.itens.length ? "" : "disabled"}>📲 Enviar PDF (WhatsApp)</button>
@@ -457,10 +491,6 @@ function vEnviar() {
     </div>`;
   view.innerHTML = h;
 }
-function relatorioAtual() {
-  return montarRelatorio({ id: atual.id, inicio: atual.inicio, itens: atual.itens, contador: atual.contador, setor: atual.setor });
-}
-function ir(p) { location.hash = "#" + p; }
 
 /* ================= eventos ================= */
 view.addEventListener("input", (e) => {
@@ -468,37 +498,16 @@ view.addEventListener("input", (e) => {
   if (t.id === "bq") { bq = t.value; bshow = 60; atualizarBusca(); return; }
   if (t.id === "ct") { atual.contador = t.value; contador = t.value; gravar(K.nome, contador); salvarAtual(); return; }
   if (t.id === "st") { atual.setor = t.value; salvarAtual(); return; }
-  const ln = t.closest(".ln");
-  if (!ln) return;
-  const card = ln.closest(".pc");
-  const it = atual.itens[+card.dataset.i];
-  const l = it.linhas.find((x) => x.id === ln.dataset.l);
-  if (t.classList.contains("q")) l.q = t.value;
-  else if (t.classList.contains("f")) { l.f = t.value; aprender(it.cod, l.tipo, t.value); }
-  else if (t.classList.contains("loc")) l.loc = t.value;
-  else return;
-  salvarAtual();
-  atualizarCartao(card);
-});
-view.addEventListener("change", (e) => {
-  const t = e.target;
-  if (!t.classList.contains("tp")) {
-    if (t.id === "imp") importar(t);
-    return;
+  if (t.classList.contains("qi")) {
+    const card = t.closest(".pc");
+    atual.itens[+card.dataset.i].q[t.dataset.t] = t.value;
+    salvarAtual();
+    atualizarCartao(card);
   }
-  const ln = t.closest(".ln"), card = ln.closest(".pc");
-  const it = atual.itens[+card.dataset.i];
-  const l = it.linhas.find((x) => x.id === ln.dataset.l);
-  l.tipo = t.value;
-  l.f = l.tipo === "cx" ? "" : fatorLembrado(it.cod, l.tipo);
-  salvarAtual();
-  vContar();
-  const q = document.querySelector('.pc[data-i="' + card.dataset.i + '"] .ln[data-l="' + l.id + '"] .q');
-  if (q) q.focus();
 });
+view.addEventListener("change", (e) => { if (e.target.id === "imp") importar(e.target); });
 view.addEventListener("click", async (e) => {
   const t = e.target;
-  // chips e lista de busca
   const chip = t.closest(".chip");
   if (chip) { bmodo = chip.dataset.m; bshow = 60; atualizarBusca(); return; }
   if (t.id === "bmais") { bshow += 100; atualizarBusca(); return; }
@@ -507,41 +516,41 @@ view.addEventListener("click", async (e) => {
   if (t.id === "nadd") {
     const nome = $("#nn").value.trim().replace(/\s+/g, " ");
     if (!nome) { aviso("Informe o nome do produto."); return; }
-    atual.itens.push({ cod: "X" + novoId(), nome, custom: true, codUser: $("#nc").value.trim(), linhas: [] });
+    atual.itens.push({ cod: "X" + novoId(), nome, custom: true, codUser: $("#nc").value.trim(), q: { pallet: "", lastro: "", cx: "" } });
     salvarAtual();
     $("#nn").value = ""; $("#nc").value = "";
-    aviso("Produto adicionado à contagem.");
+    aviso("Produto adicionado à recontagem.");
     bmodo = "marcados";
     atualizarBusca();
     return;
   }
-  // quantidades
-  const add = t.closest("[data-add]");
-  if (add) { adicionarLinha(+add.closest(".pc").dataset.i, add.dataset.add); return; }
-  if (t.classList.contains("rm")) {
-    const ln = t.closest(".ln"), card = ln.closest(".pc");
-    const it = atual.itens[+card.dataset.i];
-    const l = it.linhas.find((x) => x.id === ln.dataset.l);
-    if ((l.q || l.f) && !confirm("Remover esta linha?")) return;
-    it.linhas = it.linhas.filter((x) => x.id !== l.id);
-    salvarAtual(); vContar();
+  // botão "+" ao lado de cada campo: acrescenta um sinal de soma para digitar o próximo valor
+  const plus = t.closest(".plus");
+  if (plus) {
+    const inp = plus.closest(".r").querySelector(".qi");
+    const v = inp.value.trimEnd();
+    if (v && !/[+\-*/x×(]$/.test(v)) {
+      inp.value = v + "+";
+      inp.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    inp.focus();
+    inp.setSelectionRange(inp.value.length, inp.value.length);
     return;
   }
-  // botões com data-a
   const btn = t.closest("[data-a]");
   if (btn) {
     const a = btn.dataset.a;
     if (a === "xitem") {
       const i = +btn.closest(".pc").dataset.i;
       const it = atual.itens[i];
-      if (it.linhas.some((l) => l.q || l.f) && !confirm("Remover " + it.nome + " e as quantidades lançadas?")) return;
+      if (temDigitado(it) && !confirm("Remover " + it.nome + " e as quantidades lançadas?")) return;
       atual.itens.splice(i, 1); salvarAtual(); vContar();
     } else if (a === "nova") {
       atual = { id: novoId(), inicio: new Date().toISOString(), itens: [], setor: "", contador };
       salvarAtual(); bq = ""; bmodo = "todos"; ir("/buscar");
     } else if (a === "continuar") ir("/contar");
     else if (a === "descartar") {
-      if (confirm("Descartar a contagem em andamento? As quantidades lançadas serão perdidas.")) {
+      if (confirm("Descartar a recontagem em andamento? As quantidades lançadas serão perdidas.")) {
         atual = null;
         try { localStorage.removeItem(K.atual); } catch (er) {}
         vInicio();
@@ -550,14 +559,12 @@ view.addEventListener("click", async (e) => {
       const c = hist.find((x) => x.id === btn.dataset.h);
       if (c) { btn.disabled = true; const res = await enviarPdf(c, false); btn.disabled = false; if (res === "baixado") aviso("PDF salvo no aparelho."); }
     } else if (a === "hdel") {
-      if (confirm("Excluir esta contagem do histórico?")) { hist = hist.filter((x) => x.id !== btn.dataset.h); gravar(K.hist, hist); vInicio(); }
+      if (confirm("Excluir esta recontagem do histórico?")) { hist = hist.filter((x) => x.id !== btn.dataset.h); gravar(K.hist, hist); vInicio(); }
     } else if (a === "exp") {
-      const blob = new Blob([JSON.stringify({ versao: 1, fatores, historico: hist }, null, 2)], { type: "application/json" });
-      baixar(blob, "contagem-backup.json");
+      baixar(new Blob([JSON.stringify({ versao: 2, historico: hist }, null, 2)], { type: "application/json" }), "recontagem-backup.json");
     } else if (a === "impBtn") $("#imp").click();
     return;
   }
-  // revisão
   if (t.id === "bShare" || t.id === "bPdf") {
     const r = relatorioAtual();
     if (!r.itens.length) return;
@@ -578,14 +585,14 @@ view.addEventListener("click", async (e) => {
   } else if (t.id === "bFim") {
     const r = relatorioAtual();
     if (!r.itens.length) return;
-    if (!confirm("Concluir e guardar no histórico? A contagem em andamento será encerrada.")) return;
+    if (!confirm("Concluir e guardar no histórico? A recontagem em andamento será encerrada.")) return;
     r.fim = new Date().toISOString();
     hist.unshift(r);
     hist = hist.slice(0, 30);
     gravar(K.hist, hist);
     atual = null;
     try { localStorage.removeItem(K.atual); } catch (er) {}
-    aviso("Contagem concluída e guardada no histórico.");
+    aviso("Recontagem concluída e guardada no histórico.");
     ir("/");
   }
 });
@@ -596,13 +603,9 @@ async function importar(inp) {
   try {
     const d = JSON.parse(await file.text());
     if (!d || typeof d !== "object") throw 0;
-    if (d.fatores && typeof d.fatores === "object") {
-      Object.keys(d.fatores).forEach((c) => { fatores[c] = Object.assign({}, fatores[c], d.fatores[c]); });
-      gravar(K.fat, fatores);
-    }
     if (Array.isArray(d.historico)) {
       const ids = new Set(hist.map((h) => h.id));
-      d.historico.forEach((h) => { if (h && h.id && Array.isArray(h.itens) && !ids.has(h.id)) hist.push(h); });
+      d.historico.map(migrarHist).forEach((h) => { if (h && h.id && !ids.has(h.id)) hist.push(h); });
       hist.sort((a, b) => String(b.fim).localeCompare(String(a.fim)));
       hist = hist.slice(0, 30);
       gravar(K.hist, hist);
@@ -611,7 +614,7 @@ async function importar(inp) {
     vInicio();
   } catch (e) { aviso("Arquivo inválido. Use um backup exportado por este app."); }
 }
-// "Enter" no campo de busca só fecha o teclado
+// "Enter" no campo só fecha o teclado
 view.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.tagName === "INPUT") e.target.blur(); });
 
 render();

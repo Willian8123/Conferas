@@ -354,7 +354,8 @@ function atualizarBusca() {
     meta = rows.length ? "" : "Nenhum produto marcado ainda.";
   } else {
     const res = buscarProdutos(bq);
-    if (res === null) meta = P.length + " produtos na lista. Digite o código ou parte do nome.";
+    if (!P.length) meta = "⚠️ A lista de produtos não carregou. Confira se o arquivo produtos-dados.js está no GitHub (na mesma pasta do index.html) e atualize o app.";
+    else if (res === null) meta = P.length + " produtos na lista. Digite o código ou parte do nome.";
     else { rows = res.map((i) => [P[i][0], P[i][1]]); meta = res.length ? res.length + " encontrado(s)" : "Nenhum produto encontrado. Tente menos palavras."; }
   }
   $("#bmeta").textContent = meta;

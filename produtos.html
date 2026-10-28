@@ -25,7 +25,8 @@
 <script src="util.js"></script>
 <script src="produtos-dados.js"></script>
 <script>
-const P=window.PRODUTOS;
+const P=window.PRODUTOS||[];
+if(!P.length){const d=document.createElement("div");d.className="callout red";d.innerHTML="<p>⚠️ A lista de produtos não carregou. Confira se o arquivo <b>produtos-dados.js</b> está no GitHub (na mesma pasta do index.html) e atualize o app.</p>";document.querySelector(".pbox").before(d)}
 const norm=t=>t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 const PN=P.map(p=>norm(p[1]));
 const esc=t=>t.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));

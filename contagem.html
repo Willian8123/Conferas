@@ -226,8 +226,17 @@ async function gerarPdf(r) {
   }
   function novaPagina() { page = doc.addPage([W, H]); y = H - M; }
   novaPagina();
-  page.drawText("Recontagem", { x: M, y: y - 16, size: 20, font: fb });
-  y -= 34;
+  const LOGO_H = 42;
+  try {
+    const resp = await fetch("logo-ambev.png");
+    if (resp.ok) {
+      const img = await doc.embedPng(await resp.arrayBuffer());
+      page.drawImage(img, { x: M, y: y - LOGO_H, width: LOGO_H * img.width / img.height, height: LOGO_H });
+    }
+  } catch (e) { /* sem logo: segue só com o título */ }
+  const tit = "Recontagem", tw = fb.widthOfTextAtSize(tit, 22);
+  page.drawText(tit, { x: (W - tw) / 2, y: y - LOGO_H / 2 - 8, size: 22, font: fb });
+  y -= LOGO_H + 16;
   const info = [["Data", dataBR(r.fim)]];
   if (r.contador) info.push(["Contado por", r.contador]);
   if (r.setor) info.push(["Setor", r.setor]);

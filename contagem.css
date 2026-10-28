@@ -1,0 +1,68 @@
+/* Estilos da Contagem de estoque (usa as variáveis de ocorr.css) */
+.fixa{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--border);padding:10px 16px calc(10px + env(safe-area-inset-bottom));z-index:20}
+.fixa .in{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.fixa .info{flex:1;font-size:14px;color:var(--muted)}
+.fixa .info b{color:var(--text)}
+.fixa .btn{flex:none}
+
+.chips{display:flex;gap:8px;margin:6px 0 4px;flex-wrap:wrap}
+.chip{border:1px solid var(--border);background:var(--bg);color:var(--text);padding:7px 12px;border-radius:999px;font:inherit;font-size:14px;cursor:pointer}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+
+.sel{display:flex;gap:12px;align-items:center;padding:12px 6px;border-bottom:1px solid var(--border);cursor:pointer;border-radius:6px}
+.sel:active{background:var(--bg-hover)}
+.sel input{width:24px;height:24px;accent-color:var(--accent);flex:none;pointer-events:none}
+.sel .code{flex:none;min-width:62px;text-align:center;pointer-events:none}
+.sel .nm{flex:1;min-width:0;word-break:break-word}
+.sel.on{background:var(--blue)}
+.sel.on .nm{color:var(--blue-t);font-weight:600}
+
+.novo{margin:14px 0}
+.novo summary{cursor:pointer;color:var(--muted);font-size:14px}
+.novo .grid{margin-top:10px}
+
+.pc{border:1px solid var(--border);border-radius:12px;padding:12px;margin:12px 0;background:var(--bg)}
+.pc .ph{display:flex;gap:10px;align-items:flex-start}
+.pc .ph .t{flex:1;min-width:0}
+.pc .ph .t b{display:block;overflow-wrap:anywhere}
+.pc .ph .t .code{margin-top:4px;display:inline-block}
+.pc .ph .pt{text-align:right;white-space:nowrap}
+.pc .ph .pt .n{font-size:24px;font-weight:700;line-height:1.1}
+.pc .ph .pt small{display:block;font-size:12px;color:var(--muted)}
+.pc .xbtn{border:0;background:transparent;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 6px;border-radius:6px}
+.pc .xbtn:hover{background:var(--bg-hover)}
+
+.ln{border-top:1px dashed var(--border);margin-top:10px;padding-top:10px}
+.ln .r1{display:flex;gap:8px;align-items:center}
+.ln select{font:inherit;font-size:15px;border:1px solid var(--border);border-radius:8px;background:var(--callout);color:var(--text);padding:8px 8px;flex:none}
+.ln .loc{flex:1;min-width:0;font:inherit;font-size:15px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);padding:8px 10px}
+.ln .r2{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.ln input.q,.ln input.f{font:inherit;font-size:18px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);padding:9px 10px;min-width:0}
+.ln input.q{width:100px}
+.ln input.f{width:92px}
+.ln input:focus,.ln select:focus,.ln .loc:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.ln input.bad{border-color:#e03e3e}
+.ln .mul{color:var(--muted)}
+.ln .fl{font-size:12px;color:var(--muted)}
+.ln .eq{margin-left:auto;font-size:15px;white-space:nowrap}
+.ln .eq b{font-size:18px}
+.ln .rm{border:0;background:transparent;font-size:18px;cursor:pointer;padding:6px;border-radius:6px;flex:none}
+.ln .rm:hover{background:var(--bg-hover)}
+
+.addrow{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.addrow .btn{padding:9px 12px;font-size:14px;flex:1;min-width:92px}
+
+.resumo{width:100%}
+.resumo .it{padding:10px 12px;border-bottom:1px solid var(--border)}
+.resumo .it:last-child{border-bottom:0}
+.resumo .it .l1{display:flex;gap:10px;justify-content:space-between;align-items:baseline}
+.resumo .it .l1 b{overflow-wrap:anywhere}
+.resumo .it .l1 .tt{white-space:nowrap;font-weight:700}
+.resumo .it .l2{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.resumo .it.zero .l1 .tt{color:var(--muted);font-weight:400}
+
+.hist .li .t span{display:block}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#37352f;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;z-index:40;max-width:90vw;text-align:center;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.acoes{display:grid;gap:10px;margin-top:12px}
+.acoes .btn{width:100%;padding:13px}
+@media (min-width:600px){.acoes{grid-template-columns:1fr 1fr}.acoes .full{grid-column:1/-1}}

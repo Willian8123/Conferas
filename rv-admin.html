@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#37352f">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<title>RV · Administrador</title>
+<link rel="stylesheet" href="ocorr.css">
+<link rel="stylesheet" href="paginas.css">
+<link rel="stylesheet" href="rv.css">
+</head>
+<body>
+<div class="wrap" style="max-width:860px">
+  <a class="back" href="rv.html">← Consulta de RV</a>
+
+  <section id="vLogin" class="hidden">
+    <div class="ico">🛠️</div>
+    <h1>Administrador da RV</h1>
+    <p class="sub">Entre com a matrícula e a senha de administrador.</p>
+    <form id="fLogin" class="rvlogin" novalidate>
+      <div class="field"><label for="mat">Matrícula</label><input id="mat" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
+      <div class="field"><label for="sen">Senha</label><input id="sen" type="password" autocomplete="current-password"></div>
+      <div class="callout red hidden" id="erroLogin"><p id="erroLoginTxt"></p></div>
+      <div class="row"><button class="btn primary big" id="btnEntrar" type="submit">Entrar</button></div>
+    </form>
+  </section>
+
+  <section id="vAdmin" class="hidden">
+    <div class="rvtopo">
+      <div><h1>Administrador da RV</h1><p class="sub" id="quem"></p></div>
+      <button class="btn mini" id="btnSair" type="button">Sair</button>
+    </div>
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-t="func">👥 Funcionários</button>
+      <button class="tab" data-t="imp">📥 Importar planilha</button>
+      <button class="tab" data-t="cfg">🎛️ Painel</button>
+      <button class="tab" data-t="ver">👁️ Ver como funcionário</button>
+    </div>
+
+    <!-- FUNCIONÁRIOS -->
+    <div id="t-func">
+      <div class="sec">Criar logins da planilha <small id="faltaInfo"></small></div>
+      <div class="callout blue"><span class="ci">💡</span><p>Depois de importar a planilha, este botão cria o login de cada matrícula que ainda não tem, com uma senha aleatória, e gera uma lista para você passar a cada pessoa.</p></div>
+      <div class="row"><button class="btn primary" id="btnFaltantes" type="button">Criar logins que faltam</button></div>
+      <div id="resFaltantes"></div>
+
+      <div class="sec">Novo funcionário</div>
+      <form id="fNovo" novalidate>
+        <div class="grid">
+          <div class="field"><label for="nMat">Matrícula</label><input id="nMat" autocomplete="off" autocapitalize="none"></div>
+          <div class="field"><label for="nNome">Nome</label><input id="nNome" autocomplete="off"></div>
+          <div class="field"><label for="nCargo">Cargo (opcional)</label><input id="nCargo" autocomplete="off"></div>
+          <div class="field"><label for="nSenha">Senha (mínimo 8)</label><input id="nSenha" autocomplete="off" class="senha"></div>
+        </div>
+        <label class="chk"><input type="checkbox" id="nAdmin"> Também é administrador</label>
+        <div class="row"><button class="btn" type="button" id="btnGerar">🎲 Gerar senha</button><button class="btn primary" type="submit">Criar funcionário</button></div>
+      </form>
+      <div class="callout hidden" id="msgNovo"><p id="msgNovoTxt"></p></div>
+
+      <div class="sec">Cadastrados <small id="totFunc"></small></div>
+      <div class="list" id="listaFunc"></div>
+      <div class="callout hidden" id="msgFunc"><p id="msgFuncTxt"></p></div>
+    </div>
+
+    <!-- IMPORTAR -->
+    <div id="t-imp" class="hidden">
+      <div class="sec">Importar planilha de RV</div>
+      <div class="callout blue"><span class="ci">📄</span><p>Envie o Excel (.xlsx) ou CSV com <b>uma linha por funcionário por mês</b>. Importar de novo o mesmo mês <b>substitui</b> os valores daquela matrícula e mês; os outros meses continuam.</p></div>
+      <div class="row"><button class="btn primary" id="btnArq" type="button">Escolher arquivo</button><span class="rvsmall" id="nomeArq"></span></div>
+      <input type="file" id="arq" accept=".xlsx,.csv,.txt" class="hidden">
+      <div id="impCorpo" class="hidden">
+        <div class="grid">
+          <div class="field"><label for="selMat">Coluna da matrícula</label><select id="selMat"></select></div>
+          <div class="field"><label for="selMes">Coluna do mês</label><select id="selMes"></select></div>
+        </div>
+        <div class="sec" style="margin-top:16px">Prévia <small id="impInfo"></small></div>
+        <div class="pre" id="impPre"></div>
+        <div class="callout yellow hidden" id="impAvisos"><span class="ci">⚠️</span><p id="impAvisosTxt"></p></div>
+        <div class="row"><button class="btn primary" id="btnImportar" type="button">Importar</button></div>
+      </div>
+      <div class="callout hidden" id="msgImp"><p id="msgImpTxt"></p></div>
+    </div>
+
+    <!-- CONFIG -->
+    <div id="t-cfg" class="hidden">
+      <div class="sec">Como o painel é montado</div>
+      <div class="callout blue"><span class="ci">🎛️</span><p>Aqui você diz qual coluna da planilha vira cada parte do painel. Se a planilha mudar, ajuste aqui, sem mexer em nada mais.</p></div>
+      <div class="grid">
+        <div class="field"><label for="cValor">Coluna do valor da RV</label><select id="cValor"></select></div>
+        <div class="field"><label for="cRotulo">Título do valor</label><input id="cRotulo" autocomplete="off"></div>
+        <div class="field"><label for="cNome">Coluna do nome</label><select id="cNome"></select></div>
+        <div class="field"><label for="cCargo">Coluna do cargo</label><select id="cCargo"></select></div>
+      </div>
+      <div class="sec">Indicadores (cards)</div>
+      <div id="cInds"></div>
+      <div class="row"><button class="btn" id="addInd" type="button">+ Indicador</button></div>
+      <div class="sec">Composição do valor</div>
+      <div id="cComp"></div>
+      <div class="row"><button class="btn" id="addComp" type="button">+ Linha</button></div>
+      <div class="row"><button class="btn primary" id="btnSalvarCfg" type="button">Salvar configuração</button></div>
+      <div class="callout hidden" id="msgCfg"><p id="msgCfgTxt"></p></div>
+    </div>
+
+    <!-- VER COMO -->
+    <div id="t-ver" class="hidden">
+      <div class="sec">Ver o painel de um funcionário</div>
+      <div class="field"><label for="selVer">Funcionário</label><select id="selVer"></select></div>
+      <div id="verPainel" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <div id="semAcesso" class="hidden">
+    <div class="callout red"><span class="ci">⛔</span><p>Este login não é de administrador.</p></div>
+    <div class="row"><a class="btn" href="rv.html">Voltar</a><button class="btn" id="btnSair2" type="button">Sair</button></div>
+  </div>
+  <div id="carregando" class="rvsmall" style="margin-top:40px;text-align:center">Carregando…</div>
+</div>
+<script src="rv-config.js"></script>
+<script src="rv.js"></script>
+<script src="rv-planilha.js"></script>
+<script src="util.js"></script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const esc = RV.esc;
+  const vistas = ["vLogin", "vAdmin", "semAcesso", "carregando"];
+  const mostrar = (id) => vistas.forEach((x) => $(x).classList.toggle("hidden", x !== id));
+  function aviso(box, txt, cor, html) {
+    const b = $(box); b.className = "callout " + (cor || "red");
+    if (html) $(box + "Txt").innerHTML = txt; else $(box + "Txt").textContent = txt;
+  }
+  const ALFA = "abcdefghjkmnpqrstuvwxyzACDEFGHJKLMNPQRSTUVWXYZ23456789";
+  function gerarSenha() {
+    const a = new Uint32Array(8); crypto.getRandomValues(a);
+    return Array.from(a, (n) => ALFA[n % ALFA.length]).join("");
+  }
+  async function tudo(caminho) { // busca paginada (o servidor entrega no máx. 1000 por vez)
+    let out = [], off = 0;
+    for (;;) {
+      const r = await RV.api(caminho + (caminho.includes("?") ? "&" : "?") + "limit=1000&offset=" + off);
+      out = out.concat(r); if (r.length < 1000) return out; off += 1000;
+    }
+  }
+
+  let eu = null, cfg = null, perfis = [], colunas = [];
+
+  // ---------- entrada ----------
+  async function abrir() {
+    mostrar("carregando");
+    try {
+      eu = await RV.meuPerfil();
+      if (!eu) { await RV.sair(); return login("Login sem acesso."); }
+      if (!eu.admin) return mostrar("semAcesso");
+      $("quem").textContent = eu.nome + " · matrícula " + eu.matricula;
+      cfg = (await RV.config()) || { indicadores: [], composicao: [] };
+      mostrar("vAdmin");
+      await recarregarFunc();
+      await carregarColunas();
+      desenharCfg();
+    } catch (e) {
+      if (e.status === 401 || e.status === 403) { await RV.sair(); return login(""); }
+      mostrar("vAdmin"); aviso("msgFunc", e.message);
+    }
+  }
+  function login(msg) { mostrar("vLogin"); if (msg) aviso("erroLogin", msg); else $("erroLogin").className = "callout red hidden"; $("sen").value = ""; }
+  $("fLogin").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const m = $("mat").value.trim(), s = $("sen").value;
+    if (!m || !s) return aviso("erroLogin", "Preencha a matrícula e a senha.");
+    $("btnEntrar").disabled = true;
+    try { await RV.entrar(m, s); await abrir(); } catch (err) { aviso("erroLogin", err.message); }
+    finally { $("btnEntrar").disabled = false; }
+  });
+  const sair = async () => { await RV.sair(); login(""); };
+  $("btnSair").addEventListener("click", sair); $("btnSair2").addEventListener("click", sair);
+
+  $("tabs").addEventListener("click", (e) => {
+    const b = e.target.closest(".tab"); if (!b) return;
+    document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === b));
+    ["func", "imp", "cfg", "ver"].forEach((t) => $("t-" + t).classList.toggle("hidden", t !== b.dataset.t));
+    if (b.dataset.t === "ver") prepararVer();
+    if (b.dataset.t === "cfg") carregarColunas().then(desenharCfg);
+  });
+
+  // ---------- funcionários ----------
+  async function recarregarFunc() {
+    perfis = await RV.api("/rest/v1/perfis?select=*&order=matricula.asc");
+    $("totFunc").textContent = perfis.length + (perfis.length === 1 ? " pessoa" : " pessoas");
+    $("listaFunc").innerHTML = perfis.map((p) => `<div class="li"><div class="t"><b>${esc(p.nome)}</b>${p.admin ? ' <span class="tag t-proc" style="display:inline">admin</span>' : ""}<span>${esc(p.matricula)}${p.cargo ? " · " + esc(p.cargo) : ""}</span></div>
+      <button class="btn mini" data-a="senha" data-m="${esc(p.matricula)}">Nova senha</button>
+      ${p.matricula === eu.matricula ? "" : `<button class="btn mini danger" data-a="del" data-m="${esc(p.matricula)}">Excluir</button>`}</div>`).join("") || '<div class="empty">Ninguém cadastrado.</div>';
+    await atualizarFaltantes();
+  }
+  async function faltantes() {
+    const col = cfg.colMatricula || "Matricula", nomeCol = cfg.colNome || "Nome", cargoCol = cfg.colCargo || "Cargo";
+    const linhas = await tudo("/rest/v1/rv_dados?select=matricula,dados&order=mes.desc");
+    const ja = new Set(perfis.map((p) => p.matricula)), mapa = new Map();
+    linhas.forEach((l) => { if (!ja.has(l.matricula) && !mapa.has(l.matricula)) mapa.set(l.matricula, { matricula: l.matricula, nome: (l.dados && l.dados[nomeCol]) || ("Matrícula " + l.matricula), cargo: (l.dados && l.dados[cargoCol]) || "" }); });
+    return Array.from(mapa.values());
+  }
+  async function atualizarFaltantes() {
+    try { const f = await faltantes(); $("faltaInfo").textContent = f.length ? f.length + " sem login" : "todos têm login"; $("btnFaltantes").disabled = !f.length; }
+    catch (e) { $("faltaInfo").textContent = ""; }
+  }
+  $("btnFaltantes").addEventListener("click", async () => {
+    const f = await faltantes();
+    if (!f.length) return;
+    if (!confirm("Criar " + f.length + " login(s) com senhas aleatórias?")) return;
+    $("btnFaltantes").disabled = true;
+    const ok = [], erros = [];
+    for (const p of f) {
+      const senha = gerarSenha();
+      try { await RV.rpc("admin_criar_usuario", { p_matricula: p.matricula, p_nome: p.nome, p_cargo: p.cargo || null, p_senha: senha, p_admin: false }); ok.push({ ...p, senha }); }
+      catch (e) { erros.push(p.matricula + ": " + e.message); }
+    }
+    let h = "";
+    if (ok.length) {
+      h += `<div class="callout green"><span class="ci">✅</span><p>${ok.length} login(s) criado(s). <b>Guarde esta lista agora</b>: as senhas não ficam salvas em lugar nenhum.</p></div>
+        <div class="pre"><table><thead><tr><th>Matrícula</th><th>Nome</th><th>Senha</th></tr></thead><tbody>${ok.map((o) => `<tr><td>${esc(o.matricula)}</td><td>${esc(o.nome)}</td><td class="senha">${esc(o.senha)}</td></tr>`).join("")}</tbody></table></div>
+        <div class="row"><button class="btn" id="btnCsv" type="button">⬇️ Baixar lista (CSV)</button></div>`;
+    }
+    if (erros.length) h += `<div class="callout red"><p>Não consegui criar: ${esc(erros.join(" | "))}</p></div>`;
+    $("resFaltantes").innerHTML = h;
+    if (ok.length) $("btnCsv").addEventListener("click", () => baixarCsv(ok));
+    await recarregarFunc();
+  });
+  function baixarCsv(lista) {
+    const linhas = ["Matricula;Nome;Senha"].concat(lista.map((o) => [o.matricula, o.nome, o.senha].map((x) => '"' + String(x).replace(/"/g, '""') + '"').join(";")));
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["﻿" + linhas.join("\r\n")], { type: "text/csv;charset=utf-8" }));
+    a.download = "logins-rv.csv"; document.body.appendChild(a); a.click(); a.remove();
+  }
+  $("btnGerar").addEventListener("click", () => { $("nSenha").value = gerarSenha(); });
+  $("fNovo").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const m = $("nMat").value.trim(), n = $("nNome").value.trim(), c = $("nCargo").value.trim(), s = $("nSenha").value;
+    if (!m || !n) return aviso("msgNovo", "Informe a matrícula e o nome.");
+    if (s.length < 8) return aviso("msgNovo", "A senha precisa ter pelo menos 8 caracteres.");
+    try {
+      await RV.rpc("admin_criar_usuario", { p_matricula: m, p_nome: n, p_cargo: c || null, p_senha: s, p_admin: $("nAdmin").checked });
+      aviso("msgNovo", "Criado. Matrícula <b>" + esc(m) + "</b> · senha <span class='senha'>" + esc(s) + "</span> (anote, ela não fica visível depois).", "green", true);
+      $("nMat").value = $("nNome").value = $("nCargo").value = $("nSenha").value = ""; $("nAdmin").checked = false;
+      await recarregarFunc();
+    } catch (err) { aviso("msgNovo", err.message); }
+  });
+  $("listaFunc").addEventListener("click", async (e) => {
+    const b = e.target.closest("button[data-a]"); if (!b) return;
+    const m = b.dataset.m, p = perfis.find((x) => x.matricula === m);
+    if (b.dataset.a === "senha") {
+      if (!confirm("Gerar uma nova senha para " + p.nome + "?")) return;
+      const s = gerarSenha();
+      try { await RV.rpc("admin_resetar_senha", { p_matricula: m, p_senha: s }); aviso("msgFunc", "Nova senha de <b>" + esc(p.nome) + "</b> (" + esc(m) + "): <span class='senha'>" + esc(s) + "</span>", "green", true); }
+      catch (err) { aviso("msgFunc", err.message); }
+    } else if (confirm("Excluir o login de " + p.nome + "? Os dados de RV dela continuam na planilha importada.")) {
+      try { await RV.rpc("admin_excluir_usuario", { p_matricula: m }); await recarregarFunc(); aviso("msgFunc", "Login excluído.", "green"); }
+      catch (err) { aviso("msgFunc", err.message); }
+    }
+  });
+
+  // ---------- importar ----------
+  let tabela = null;
+  $("btnArq").addEventListener("click", () => $("arq").click());
+  $("arq").addEventListener("change", async (e) => {
+    const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+    $("msgImp").className = "callout hidden"; $("nomeArq").textContent = f.name;
+    try { tabela = await RVPlanilha.lerArquivo(f); } catch (err) { $("impCorpo").classList.add("hidden"); return aviso("msgImp", err.message); }
+    const opts = tabela.colunas.map((c) => `<option>${esc(c)}</option>`).join("");
+    $("selMat").innerHTML = opts; $("selMes").innerHTML = opts;
+    const acha = (re, pad) => (pad && tabela.colunas.includes(pad)) ? pad : (tabela.colunas.find((c) => re.test(c)) || tabela.colunas[0]);
+    $("selMat").value = acha(/matr/i, cfg.colMatricula);
+    $("selMes").value = acha(/m[eê]s|compet|refer|per[ií]odo|data/i, cfg.colMes);
+    $("impCorpo").classList.remove("hidden");
+    prever();
+  });
+  $("selMat").addEventListener("change", prever); $("selMes").addEventListener("change", prever);
+
+  function montar() {
+    const cm = $("selMat").value, cs = $("selMes").value, ok = new Map(), erros = [];
+    tabela.linhas.forEach((l, i) => {
+      const mat = RVPlanilha.normMatricula(l[cm]), mes = RVPlanilha.normMes(l[cs]);
+      if (!mat) return erros.push("linha " + (i + 2) + ": sem matrícula");
+      if (!mes) return erros.push("linha " + (i + 2) + ": mês não reconhecido (" + (l[cs] == null ? "vazio" : l[cs]) + ")");
+      const dados = {};
+      tabela.colunas.forEach((c) => { dados[c] = (c === cm || c === cs) ? (c === cm ? mat : mes) : RVPlanilha.paraNumero(l[c]); });
+      ok.set(mat + "|" + mes, { matricula: mat, mes, dados });
+    });
+    return { linhas: Array.from(ok.values()), erros, repetidas: tabela.linhas.length - erros.length - ok.size };
+  }
+  function prever() {
+    const r = montar();
+    $("impInfo").textContent = tabela.linhas.length + " linhas · " + tabela.colunas.length + " colunas";
+    const cab = tabela.colunas.map((c) => `<th>${esc(c)}</th>`).join("");
+    const corpo = tabela.linhas.slice(0, 5).map((l) => "<tr>" + tabela.colunas.map((c) => `<td>${esc(l[c] == null ? "" : l[c])}</td>`).join("") + "</tr>").join("");
+    $("impPre").innerHTML = `<table><thead><tr>${cab}</tr></thead><tbody>${corpo}</tbody></table>`;
+    const av = [];
+    if (r.erros.length) av.push(r.erros.length + " linha(s) serão ignoradas: " + r.erros.slice(0, 4).join("; ") + (r.erros.length > 4 ? "…" : ""));
+    if (r.repetidas > 0) av.push(r.repetidas + " linha(s) repetem matrícula e mês (vale a última).");
+    $("impAvisos").classList.toggle("hidden", !av.length); $("impAvisosTxt").textContent = av.join(" ");
+    $("btnImportar").textContent = "Importar " + r.linhas.length + " registro(s)"; $("btnImportar").disabled = !r.linhas.length;
+  }
+  $("btnImportar").addEventListener("click", async () => {
+    const r = montar(); if (!r.linhas.length) return;
+    $("btnImportar").disabled = true; const agora = new Date().toISOString();
+    try {
+      for (let i = 0; i < r.linhas.length; i += 200) {
+        const lote = r.linhas.slice(i, i + 200).map((x) => ({ ...x, atualizado_em: agora }));
+        await RV.api("/rest/v1/rv_dados?on_conflict=matricula,mes", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: lote });
+      }
+      cfg.colMatricula = $("selMat").value; cfg.colMes = $("selMes").value;
+      await RV.api("/rest/v1/rv_config?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: { id: 1, config: cfg, atualizado_em: agora } });
+      colunas = tabela.colunas.slice();
+      const usadas = [cfg.valor, cfg.colNome].concat((cfg.indicadores || []).flatMap((x) => [x.meta, x.resultado]), (cfg.composicao || []).map((x) => x.campo)).filter(Boolean);
+      const falta = usadas.filter((c) => !colunas.includes(c));
+      let msg = r.linhas.length + " registro(s) importado(s).";
+      if (falta.length) msg += " Atenção: o painel usa colunas que não existem nesta planilha (" + Array.from(new Set(falta)).join(", ") + "). Ajuste na aba Painel.";
+      aviso("msgImp", msg, falta.length ? "yellow" : "green");
+      $("impCorpo").classList.add("hidden");
+      desenharCfg(); await atualizarFaltantes();
+    } catch (e) { aviso("msgImp", "Não consegui importar: " + e.message); $("btnImportar").disabled = false; }
+  });
+
+  // ---------- configuração do painel ----------
+  async function carregarColunas() {
+    if (colunas.length) return;
+    try { const r = await RV.api("/rest/v1/rv_dados?select=dados&limit=1"); if (r[0]) colunas = Object.keys(r[0].dados); } catch (e) {}
+  }
+  const sel = (id, atual, extra) => {
+    const lista = colunas.slice(); if (atual && !lista.includes(atual)) lista.unshift(atual);
+    return `<select ${id}>${extra || ""}${lista.map((c) => `<option ${c === atual ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>`;
+  };
+  function desenharCfg() {
+    const pre = (id, atual) => { $(id).innerHTML = sel("", atual, id === "cValor" ? "" : '<option value="">(nenhuma)</option>').replace(/^<select >|<\/select>$/g, ""); $(id).value = atual || ""; };
+    pre("cValor", cfg.valor); pre("cNome", cfg.colNome); pre("cCargo", cfg.colCargo);
+    $("cRotulo").value = cfg.valorRotulo || "Sua RV";
+    $("cInds").innerHTML = (cfg.indicadores || []).map((x, i) => `<div class="cfgrow" data-i="${i}">
+      <div class="field"><label>Nome</label><input data-k="nome" value="${esc(x.nome)}"></div>
+      <div class="field"><label>Coluna da meta</label>${sel('data-k="meta"', x.meta)}</div>
+      <div class="field"><label>Coluna do resultado</label>${sel('data-k="resultado"', x.resultado)}</div>
+      <div class="field" style="width:70px"><label>Unid.</label><input data-k="sufixo" value="${esc(x.sufixo || "")}"></div>
+      <div><label class="chk"><input type="checkbox" data-k="menorMelhor" ${x.menorMelhor ? "checked" : ""}> menor é melhor</label><button class="btn mini danger" data-del="ind" type="button">Remover</button></div></div>`).join("");
+    $("cComp").innerHTML = (cfg.composicao || []).map((x, i) => `<div class="cfgrow c3" data-i="${i}">
+      <div class="field"><label>Rótulo</label><input data-k="rotulo" value="${esc(x.rotulo)}"></div>
+      <div class="field"><label>Coluna</label>${sel('data-k="campo"', x.campo)}</div>
+      <div class="field"><label>Sinal</label><select data-k="sinal"><option value="1" ${x.sinal >= 0 ? "selected" : ""}>soma (+)</option><option value="-1" ${x.sinal < 0 ? "selected" : ""}>desconta (−)</option></select></div>
+      <button class="btn mini danger" data-del="comp" type="button">Remover</button></div>`).join("");
+  }
+  function lerCfg() {
+    const n = JSON.parse(JSON.stringify(cfg));
+    n.valor = $("cValor").value; n.valorRotulo = $("cRotulo").value.trim() || "Sua RV";
+    n.colNome = $("cNome").value || undefined; n.colCargo = $("cCargo").value || undefined;
+    n.indicadores = Array.from($("cInds").children).map((r) => { const g = (k) => r.querySelector(`[data-k="${k}"]`); return { nome: g("nome").value.trim() || "Indicador", meta: g("meta").value, resultado: g("resultado").value, sufixo: g("sufixo").value.trim(), menorMelhor: g("menorMelhor").checked }; });
+    n.composicao = Array.from($("cComp").children).map((r) => { const g = (k) => r.querySelector(`[data-k="${k}"]`); return { rotulo: g("rotulo").value.trim() || "Item", campo: g("campo").value, sinal: +g("sinal").value }; });
+    return n;
+  }
+  $("addInd").addEventListener("click", () => { cfg = lerCfg(); cfg.indicadores.push({ nome: "Novo indicador", meta: colunas[0], resultado: colunas[0], sufixo: "", menorMelhor: false }); desenharCfg(); });
+  $("addComp").addEventListener("click", () => { cfg = lerCfg(); cfg.composicao.push({ rotulo: "Novo item", campo: colunas[0], sinal: 1 }); desenharCfg(); });
+  $("t-cfg").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-del]"); if (!b) return;
+    const i = +b.closest("[data-i]").dataset.i; cfg = lerCfg();
+    (b.dataset.del === "ind" ? cfg.indicadores : cfg.composicao).splice(i, 1); desenharCfg();
+  });
+  $("btnSalvarCfg").addEventListener("click", async () => {
+    const n = lerCfg();
+    try {
+      await RV.api("/rest/v1/rv_config?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: { id: 1, config: n, atualizado_em: new Date().toISOString() } });
+      cfg = n; aviso("msgCfg", "Configuração salva. Confira na aba “Ver como funcionário”.", "green");
+    } catch (e) { aviso("msgCfg", e.message); }
+  });
+
+  // ---------- ver como ----------
+  let estadoVer = {};
+  function prepararVer() {
+    const lista = perfis.filter((p) => !p.admin).concat(perfis.filter((p) => p.admin));
+    $("selVer").innerHTML = lista.map((p) => `<option value="${esc(p.matricula)}">${esc(p.nome)} (${esc(p.matricula)})</option>`).join("");
+    mostrarVer();
+  }
+  async function mostrarVer() {
+    const m = $("selVer").value, p = perfis.find((x) => x.matricula === m); if (!p) return;
+    try { const linhas = await RV.dadosDe(m); estadoVer = {}; RV.painel($("verPainel"), p, linhas, cfg, estadoVer); }
+    catch (e) { $("verPainel").innerHTML = '<div class="callout red"><p>' + esc(e.message) + "</p></div>"; }
+  }
+  $("selVer").addEventListener("change", mostrarVer);
+
+  if (RV.logado()) abrir(); else login("");
+})();
+</script>
+</body>
+</html>

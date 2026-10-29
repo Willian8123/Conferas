@@ -1,6 +1,6 @@
 // Service worker: deixa o app funcionar offline.
 // Ao alterar qualquer arquivo, aumente a versão abaixo para o celular atualizar.
-const VERSION = "rotinas-v13";
+const VERSION = "rotinas-v14";
 const FILES = [
   "./",
   "./index.html",
@@ -27,6 +27,12 @@ const FILES = [
   "./ocorr.js",
   "./util.js",
   "./config.js",
+  "./rv.html",
+  "./rv-admin.html",
+  "./rv.css",
+  "./rv.js",
+  "./rv-config.js",
+  "./rv-planilha.js",
   "./icon-192.png",
   "./icon-512.png",
   "./icon-maskable-512.png"
@@ -49,6 +55,8 @@ self.addEventListener("activate", (e) => {
 // Rede primeiro (pega atualização quando online), cache como reserva offline.
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
+  // Nunca guarda no cache o que vem de fora do app (ex.: dados de RV vindos do Supabase).
+  if (new URL(e.request.url).origin !== self.location.origin) return;
   e.respondWith(
     fetch(e.request)
       .then((res) => {

@@ -17,9 +17,12 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="ico">🏭</div>
-  <h1>CDD Embu</h1>
-  <p class="sub">Ambev · Escolha uma opção</p>
+  <header class="hero">
+    <div class="hero-glow" aria-hidden="true"></div>
+    <img class="hero-logo" src="logo-cddembu.png" alt="CDD Embu" width="300" height="300" onerror="this.outerHTML='<div class=&quot;ico&quot;>🏭</div>'">
+    <h1 class="sr">CDD Embu</h1>
+    <p class="hero-sub">Ambev · Escolha uma opção</p>
+  </header>
 
   <div class="quem" id="quem"></div>
 
@@ -29,7 +32,7 @@
       <div><b>Conferente</b><span>Rotinas, produtos, recontagem e checklist</span></div>
       <span class="go">›</span>
     </a>
-    <a class="porta" href="rv.html" data-perm="">
+    <a class="porta" href="rv.html" data-perm="lobinho">
       <span class="pi" id="piLobinho"><img src="lobinho.png" alt="" onerror="this.parentNode.textContent='🐺'"></span>
       <div><b>Lobinho</b><span>Minha RV: valores e indicadores do mês</span></div>
       <span class="go">›</span>
@@ -40,6 +43,7 @@
       <span class="go">›</span>
     </a>
   </div>
+  <div class="callout yellow hidden" id="semNada"><span class="ci">ℹ️</span><p>O seu login ainda não tem acesso a nenhuma área. Peça ao administrador para liberar.</p></div>
   <p class="rvsmall" id="admLink" style="display:none;margin-top:18px"><a href="rv-admin.html">🛠️ Painel do administrador</a></p>
 </div>
 <script src="rv-config.js"></script>
@@ -54,8 +58,7 @@
 
   function pode(p, perm) {
     if (!perm || p.admin) return true;
-    const a = p.acessos || [];
-    return perm === "conferente" ? a.includes("conferente") : (a.includes("ocorrencias") || a.includes("conferente"));
+    return (p.acessos || []).includes(perm);
   }
   function desenhar() {
     const p = RV.logado() ? RV.perfilCache() : null;
@@ -70,6 +73,7 @@
       a.style.display = p && !liberada ? "none" : "";
       a.setAttribute("href", p ? a.dataset.dest : "entrar.html?volta=" + encodeURIComponent(a.dataset.dest));
     });
+    $("semNada").classList.toggle("hidden", !(p && portas.every((a) => a.style.display === "none")));
     $("admLink").style.display = p && p.admin ? "block" : "none";
   }
   desenhar();

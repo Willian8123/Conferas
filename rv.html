@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="ocorr.css">
 <link rel="stylesheet" href="paginas.css">
 <link rel="stylesheet" href="rv.css">
-<script src="rv-config.js"></script><script src="rv.js"></script><script src="acesso.js" data-exigir=""></script>
+<script src="rv-config.js"></script><script src="rv.js"></script><script src="acesso.js" data-exigir="lobinho"></script>
 </head>
 <body>
 <div class="wrap">
@@ -41,11 +41,14 @@
   const aviso = (box, txt, cor) => { $(box).className = "callout " + (cor || "red"); $(box + "Txt").textContent = txt; };
 
   async function abrir() {
+    if (!$("painel")) return;
     $("painel").innerHTML = '<p class="rvsmall" style="text-align:center;margin:30px 0">Carregando…</p>';
     try {
       const perfil = await RV.meuPerfil();
       if (!perfil) { await RV.sair(); return location.replace("entrar.html?volta=rv.html"); }
+      if (!$("painel")) return; // a guarda de acesso trocou a tela por "Sem acesso"
       const [cfg, linhas] = await Promise.all([RV.config(), RV.dadosDe(perfil.matricula)]);
+      if (!$("painel")) return;
       $("ola").textContent = "Olá, " + (perfil.nome || "").trim().split(/\s+/)[0] + " 👋";
       $("quem").textContent = ["Lobinho · Minha RV", perfil.cargo, "Matrícula " + perfil.matricula].filter(Boolean).join(" · ");
       $("lnkAdmin").classList.toggle("hidden", !perfil.admin);
@@ -53,6 +56,7 @@
       else RV.painel($("painel"), perfil, linhas, cfg, {});
     } catch (e) {
       if (e.status === 400 || e.status === 401 || e.status === 403) { await RV.sair(); return location.replace("entrar.html?volta=rv.html"); }
+      if (!$("painel")) return;
       $("painel").innerHTML = '<div class="callout red"><p>' + RV.esc(e.message) + '</p></div><div class="row"><button class="btn" id="btnDeNovo">Tentar de novo</button></div>';
       $("btnDeNovo").addEventListener("click", abrir);
     }

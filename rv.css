@@ -64,3 +64,27 @@
 .rvlogo{max-height:64px;max-width:160px;object-fit:contain;display:block}
 @media (min-width:700px){.portas{grid-template-columns:repeat(3,1fr)}.porta{flex-direction:column;text-align:center;padding:26px 16px}.porta .go{margin:0}}
 .lobo{margin-top:14px;min-height:56px;font-size:56px;line-height:1}.lobo .rvlogo{max-height:72px}
+.acs{display:flex;flex-wrap:wrap;gap:2px 18px}
+.acs .chk{padding:7px 0}
+
+/* tela inicial: logo do CDD Embu centralizada */
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.hero{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;margin:10px 0 16px}
+.hero .ico{margin:14px 0}
+.hero-glow{position:absolute;top:14px;left:50%;width:min(340px,86vw);aspect-ratio:1;transform:translateX(-50%);border-radius:50%;
+  background:radial-gradient(circle,rgba(35,131,226,.30) 0%,rgba(35,131,226,.10) 45%,transparent 70%);filter:blur(10px);z-index:0;animation:brilho 5s ease-in-out infinite}
+.hero-logo{position:relative;z-index:1;display:block;width:min(300px,76vw);height:auto;margin:0 auto;
+  filter:drop-shadow(0 12px 18px rgba(8,28,90,.35));animation:heroEntra .8s cubic-bezier(.2,.8,.2,1) both,heroFlutua 6s ease-in-out .9s infinite}
+.hero-sub{position:relative;z-index:1;margin:8px 0 0;color:var(--muted);font-size:15px;letter-spacing:.3px}
+.portas .porta{animation:portaSobe .55s cubic-bezier(.2,.8,.2,1) both}
+.portas .porta:nth-child(1){animation-delay:.15s}.portas .porta:nth-child(2){animation-delay:.25s}.portas .porta:nth-child(3){animation-delay:.35s}
+@keyframes heroEntra{from{opacity:0;transform:scale(.86) translateY(14px)}to{opacity:1;transform:none}}
+@keyframes heroFlutua{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes brilho{0%,100%{opacity:.75;transform:translateX(-50%) scale(1)}50%{opacity:1;transform:translateX(-50%) scale(1.06)}}
+@keyframes portaSobe{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@media (prefers-color-scheme:dark){.hero-glow{background:radial-gradient(circle,rgba(46,140,255,.42) 0%,rgba(46,140,255,.14) 45%,transparent 70%)}.hero-logo{filter:drop-shadow(0 12px 22px rgba(0,0,0,.6))}}
+@media (prefers-reduced-motion:reduce){.hero-logo,.hero-glow,.portas .porta{animation:none}}
+/* lista de pessoas (admin): nome e acessos em cima, botões embaixo */
+#listaFunc .li{row-gap:8px}
+#listaFunc .li .t{flex:1 1 100%}
+#listaFunc .li .t .tag{margin:2px 4px 2px 0}

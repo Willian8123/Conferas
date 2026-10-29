@@ -44,13 +44,13 @@
           <div class="field"><label for="nCargo">Cargo (opcional)</label><input id="nCargo" autocomplete="off"></div>
           <div class="field"><label for="nSenha">Senha (mínimo 8)</label><input id="nSenha" autocomplete="off" class="senha"></div>
         </div>
-        <div class="field" style="margin-top:12px"><label for="nNivel">Nível de acesso</label>
-          <select id="nNivel">
-            <option value="lobinho">Só Lobinho (consultar a própria RV)</option>
-            <option value="ocorr">Lobinho + Ocorrências (ex.: operador de empilhadeira)</option>
-            <option value="conf">Lobinho + Conferente + Ocorrências</option>
-          </select>
-          <span class="hint">Preenche sozinho pelo cargo (conferente / empilhadeira). Você pode mudar.</span></div>
+        <div class="field" style="margin-top:12px"><label>Acessos (marque quantos quiser)</label>
+          <div class="acs" id="nAcs">
+            <label class="chk"><input type="checkbox" value="lobinho" checked> 🐺 Lobinho (ver a própria RV)</label>
+            <label class="chk"><input type="checkbox" value="conferente"> 📋 Conferente</label>
+            <label class="chk"><input type="checkbox" value="ocorrencias"> 📨 Ocorrências</label>
+          </div>
+          <span class="hint">Ao digitar o cargo, eu sugiro: Conferente → Conferente + Ocorrências · Empilhadeira → Ocorrências + Lobinho · Armazém → Lobinho. Você pode mudar.</span></div>
         <label class="chk"><input type="checkbox" id="nAdmin"> Também é administrador</label>
         <div class="row"><button class="btn" type="button" id="btnGerar">🎲 Gerar senha</button><button class="btn primary" type="submit">Criar funcionário</button></div>
       </form>
@@ -58,7 +58,7 @@
 
       <div class="sec">Cadastrados <small id="totFunc"></small></div>
       <div class="field" style="margin-bottom:8px"><label for="fFiltro">Mostrar</label>
-        <select id="fFiltro"><option value="">Todos</option><option value="conf">Conferentes</option><option value="ocorr">Operadores (Ocorrências)</option><option value="lobinho">Só Lobinho</option><option value="admin">Administradores</option></select></div>
+        <select id="fFiltro"><option value="">Todos</option><option value="lobinho">Com Lobinho</option><option value="conferente">Com Conferente</option><option value="ocorrencias">Com Ocorrências</option><option value="nenhum">Sem nenhum acesso</option><option value="admin">Administradores</option></select></div>
       <div class="list" id="listaFunc"></div>
       <div class="callout hidden" id="msgFunc"><p id="msgFuncTxt"></p></div>
     </div>
@@ -173,12 +173,15 @@
     if (b.dataset.t === "cfg") carregarColunas().then(desenharCfg);
   });
 
-  // ---------- níveis de acesso ----------
-  const NIVEIS = { lobinho: [], ocorr: ["ocorrencias"], conf: ["conferente", "ocorrencias"] };
-  const NOMES = { lobinho: "Só Lobinho", ocorr: "Ocorrências", conf: "Conferente" };
-  const nivelDe = (p) => (p.acessos || []).includes("conferente") ? "conf" : (p.acessos || []).includes("ocorrencias") ? "ocorr" : "lobinho";
-  const nivelPorCargo = (c) => /conferente/i.test(c || "") ? "conf" : /empilhadeira/i.test(c || "") ? "ocorr" : "lobinho";
-  const optsNivel = (atual) => Object.keys(NOMES).map((k) => `<option value="${k}" ${k === atual ? "selected" : ""}>${NOMES[k]}</option>`).join("");
+  // ---------- acessos (qualquer combinação) ----------
+  const ACESSOS = ["lobinho", "conferente", "ocorrencias"];
+  const NOME_AC = { lobinho: "Lobinho", conferente: "Conferente", ocorrencias: "Ocorrências" };
+  const ROTULO_AC = { lobinho: "🐺 Lobinho (ver a própria RV)", conferente: "📋 Conferente", ocorrencias: "📨 Ocorrências" };
+  const TAG_AC = { lobinho: "t-retorno", conferente: "t-carreg", ocorrencias: "t-puxada" };
+  const acessosPorCargo = (c) => /conferente/i.test(c || "") ? ["conferente", "ocorrencias"] : /empilhadeira/i.test(c || "") ? ["ocorrencias", "lobinho"] : ["lobinho"];
+  const marcados = (id) => Array.from($(id).querySelectorAll("input[type=checkbox]")).filter((c) => c.checked).map((c) => c.value);
+  const marcar = (id, lista) => $(id).querySelectorAll("input[type=checkbox]").forEach((c) => { c.checked = lista.includes(c.value); });
+  const textoAcessos = (lista) => lista.length ? ACESSOS.filter((x) => lista.includes(x)).map((x) => NOME_AC[x]).join(" + ") : "nenhum";
   let editAc = null;
 
   // ---------- funcionários ----------
@@ -189,15 +192,16 @@
   }
   function desenharLista() {
     const f = $("fFiltro").value;
-    const lista = perfis.filter((p) => !f || (f === "admin" ? p.admin : (!p.admin && nivelDe(p) === f)));
+    const tem = (p, k) => (p.acessos || []).includes(k);
+    const lista = perfis.filter((p) => !f || (f === "admin" ? p.admin : f === "nenhum" ? (!p.admin && !(p.acessos || []).length) : (!p.admin && tem(p, f))));
     $("totFunc").textContent = lista.length + (lista.length === 1 ? " pessoa" : " pessoas") + (f ? " (de " + perfis.length + ")" : "");
     $("listaFunc").innerHTML = lista.map((p) => {
-      const n = nivelDe(p);
-      const chip = p.admin ? '<span class="tag t-proc" style="display:inline">administrador · acesso total</span>' : `<span class="tag ${n === "conf" ? "t-carreg" : n === "ocorr" ? "t-puxada" : "t-retorno"}" style="display:inline">${NOMES[n]}</span>`;
-      const ed = editAc === p.matricula ? `<div style="flex-basis:100%;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-top:6px">
-          <div class="field" style="flex:1;min-width:180px;padding:6px 10px"><label>Nível de acesso</label><select id="eNivel">${optsNivel(n)}</select></div>
-          <button class="btn mini primary" data-a="acSalvar" data-m="${esc(p.matricula)}">Salvar</button><button class="btn mini" data-a="acCancelar">Cancelar</button></div>` : "";
-      return `<div class="li" style="flex-wrap:wrap"><div class="t"><b>${esc(p.nome)}</b> ${chip}<span>${esc(p.matricula)}${p.cargo ? " · " + esc(p.cargo) : ""}</span></div>
+      const ac = p.acessos || [];
+      const chips = p.admin ? '<span class="tag t-proc" style="display:inline">administrador · acesso total</span>'
+        : ACESSOS.filter((k) => ac.includes(k)).map((k) => `<span class="tag ${TAG_AC[k]}" style="display:inline">${NOME_AC[k]}</span>`).join(" ") || '<span class="tag t-controle" style="display:inline">sem nenhum acesso</span>';
+      const ed = editAc === p.matricula ? `<div style="flex-basis:100%;padding-top:8px"><div class="acs" id="eAcs">${ACESSOS.map((k) => `<label class="chk"><input type="checkbox" value="${k}" ${ac.includes(k) ? "checked" : ""}> ${ROTULO_AC[k]}</label>`).join("")}</div>
+          <div class="row" style="margin:4px 0 0"><button class="btn mini primary" data-a="acSalvar" data-m="${esc(p.matricula)}">Salvar acessos</button><button class="btn mini" data-a="acCancelar">Cancelar</button></div></div>` : "";
+      return `<div class="li" style="flex-wrap:wrap"><div class="t"><b>${esc(p.nome)}</b> ${chips}<span>${esc(p.matricula)}${p.cargo ? " · " + esc(p.cargo) : ""}</span></div>
         ${p.admin ? "" : `<button class="btn mini" data-a="acesso" data-m="${esc(p.matricula)}">Acessos</button>`}
         <button class="btn mini" data-a="senha" data-m="${esc(p.matricula)}">Nova senha</button>
         ${p.matricula === eu.matricula ? "" : `<button class="btn mini danger" data-a="del" data-m="${esc(p.matricula)}">Excluir</button>`}${ed}</div>`;
@@ -223,8 +227,8 @@
     const ok = [], erros = [];
     for (const p of f) {
       const senha = gerarSenha();
-      const nivel = nivelPorCargo(p.cargo);
-      try { await RV.rpc("admin_criar_usuario", { p_matricula: p.matricula, p_nome: p.nome, p_cargo: p.cargo || null, p_senha: senha, p_admin: false, p_acessos: NIVEIS[nivel] }); ok.push({ ...p, senha, nivel: NOMES[nivel] }); }
+      const ac = acessosPorCargo(p.cargo);
+      try { await RV.rpc("admin_criar_usuario", { p_matricula: p.matricula, p_nome: p.nome, p_cargo: p.cargo || null, p_senha: senha, p_admin: false, p_acessos: ac }); ok.push({ ...p, senha, nivel: textoAcessos(ac) }); }
       catch (e) { erros.push(p.matricula + ": " + e.message); }
     }
     let h = "";
@@ -244,7 +248,9 @@
     a.href = URL.createObjectURL(new Blob(["﻿" + linhas.join("\r\n")], { type: "text/csv;charset=utf-8" }));
     a.download = "logins-rv.csv"; document.body.appendChild(a); a.click(); a.remove();
   }
-  $("nCargo").addEventListener("input", () => { $("nNivel").value = nivelPorCargo($("nCargo").value); });
+  let nTocou = false;
+  $("nAcs").addEventListener("change", () => { nTocou = true; });
+  $("nCargo").addEventListener("input", () => { if (!nTocou) marcar("nAcs", acessosPorCargo($("nCargo").value)); });
   $("btnGerar").addEventListener("click", () => { $("nSenha").value = gerarSenha(); });
   $("fNovo").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -252,9 +258,9 @@
     if (!m || !n) return aviso("msgNovo", "Informe a matrícula e o nome.");
     if (s.length < 8) return aviso("msgNovo", "A senha precisa ter pelo menos 8 caracteres.");
     try {
-      await RV.rpc("admin_criar_usuario", { p_matricula: m, p_nome: n, p_cargo: c || null, p_senha: s, p_admin: $("nAdmin").checked, p_acessos: NIVEIS[$("nNivel").value] });
+      await RV.rpc("admin_criar_usuario", { p_matricula: m, p_nome: n, p_cargo: c || null, p_senha: s, p_admin: $("nAdmin").checked, p_acessos: marcados("nAcs") });
       aviso("msgNovo", "Criado. Matrícula <b>" + esc(m) + "</b> · senha <span class='senha'>" + esc(s) + "</span> (anote, ela não fica visível depois).", "green", true);
-      $("nMat").value = $("nNome").value = $("nCargo").value = $("nSenha").value = ""; $("nAdmin").checked = false; $("nNivel").value = "lobinho";
+      $("nMat").value = $("nNome").value = $("nCargo").value = $("nSenha").value = ""; $("nAdmin").checked = false; nTocou = false; marcar("nAcs", ["lobinho"]);
       await recarregarFunc();
     } catch (err) { aviso("msgNovo", err.message); }
   });
@@ -264,7 +270,8 @@
     if (b.dataset.a === "acesso") { editAc = m; return desenharLista(); }
     if (b.dataset.a === "acCancelar") { editAc = null; return desenharLista(); }
     if (b.dataset.a === "acSalvar") {
-      try { await RV.rpc("admin_definir_acessos", { p_matricula: m, p_acessos: NIVEIS[$("eNivel").value] }); editAc = null; await recarregarFunc(); aviso("msgFunc", "Acesso de " + p.nome + " atualizado: " + NOMES[nivelDe(perfis.find((x) => x.matricula === m))] + ".", "green"); }
+      const novos = marcados("eAcs");
+      try { await RV.rpc("admin_definir_acessos", { p_matricula: m, p_acessos: novos }); editAc = null; await recarregarFunc(); aviso("msgFunc", "Acessos de " + p.nome + " atualizados: " + textoAcessos(novos) + ".", "green"); }
       catch (err) { aviso("msgFunc", err.message); }
       return;
     }

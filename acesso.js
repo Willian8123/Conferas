@@ -1,6 +1,6 @@
 // Guarda de acesso: coloque nas páginas protegidas, DEPOIS de rv-config.js e rv.js:
 //   <script src="acesso.js" data-exigir="conferente"></script>
-// data-exigir: "" (qualquer pessoa logada), "conferente", "ocorrencias" ou "admin".
+// data-exigir: "" (qualquer pessoa logada), "lobinho", "conferente", "ocorrencias" ou "admin".
 // Funciona sem internet: usa a cópia do perfil salva no aparelho e atualiza quando há rede.
 (function () {
   const alvo = (document.currentScript && document.currentScript.getAttribute("data-exigir")) || "";
@@ -11,20 +11,18 @@
   document.head.appendChild(oculta);
   const mostrar = () => { const e = document.getElementById("acessoOculta"); if (e) e.remove(); };
 
+  // Cada acesso vale só por si: "lobinho", "conferente" ou "ocorrencias". Administrador abre tudo.
   function pode(p, perm) {
     if (!p) return false;
     if (!perm) return true;
     if (p.admin) return true;
-    const a = p.acessos || [];
     if (perm === "admin") return false;
-    if (perm === "conferente") return a.includes("conferente");
-    if (perm === "ocorrencias") return a.includes("ocorrencias") || a.includes("conferente");
-    return false;
+    return (p.acessos || []).includes(perm);
   }
   function irParaLogin() { location.replace("entrar.html?volta=" + encodeURIComponent(arquivo)); }
   function negado(p) {
     if (!document.body) { document.addEventListener("DOMContentLoaded", () => negado(p)); return; }
-    const nomes = { conferente: "a área do Conferente", ocorrencias: "as Ocorrências", admin: "o painel de administrador" };
+    const nomes = { lobinho: "o Lobinho (RV)", conferente: "a área do Conferente", ocorrencias: "as Ocorrências", admin: "o painel de administrador" };
     document.body.innerHTML = '<div class="wrap"><div class="ico">⛔</div><h1>Sem acesso</h1>' +
       '<p class="sub">' + (p ? esc(p.nome) + ", seu login não tem permissão para abrir " : "Seu login não tem permissão para abrir ") + (nomes[alvo] || "esta página") + ".</p>" +
       '<div class="callout yellow"><p>Se isso for um engano, peça ao administrador para liberar o seu acesso.</p></div>' +

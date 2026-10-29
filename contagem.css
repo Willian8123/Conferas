@@ -83,3 +83,24 @@
 .resumo .it .l1b{display:flex;gap:14px;flex-wrap:wrap;margin-top:4px;font-size:14px}
 .resumo .it .l1b .vz{color:var(--muted)}
 .resumo .it.tt2{background:var(--callout)}
+
+/* ---- Recontagem: cartões que expandem (tela pequena) + campo Unidades ---- */
+.pc{padding:0;overflow:hidden}
+.pc .ph{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:transparent;border:0;color:var(--text);font:inherit;padding:12px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pc .ph:active{background:var(--bg-hover)}
+.pc .ph .t{flex:1;min-width:0;display:block}
+.pc .ph .t b{display:block;overflow-wrap:anywhere}
+.pc .ph .t .code{margin-top:4px;display:inline-block}
+.pc .ph .resu{display:block;margin:4px 0 0;font-size:14px;color:var(--muted)}
+.pc .ph .resu b{color:var(--text)}
+.pc .chev{flex:none;color:var(--muted);font-size:22px;line-height:1;transition:transform .15s}
+.pc.open .chev{transform:rotate(180deg)}
+.pc.open{border-color:var(--accent)}
+.pc .pb{display:none;padding:0 12px 12px;border-top:1px dashed var(--border)}
+.pc.open .pb{display:block}
+.pc .rem{margin-top:14px;text-align:right}
+.pc .rem .btn{font-size:13px;padding:7px 12px;color:#e03e3e}
+.pc .st{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:14px;border:1px solid var(--border);color:var(--muted)}
+.pc .st.ok{background:var(--green);color:var(--green-t);border-color:transparent;font-weight:700}
+.pc .st.bad{background:var(--red);color:var(--red-t);border-color:transparent;font-weight:700}
+.pc{margin:8px 0}

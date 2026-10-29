@@ -22,6 +22,7 @@
 
 <script src="util.js"></script>
 <script src="produtos-dados.js"></script>
+<script src="produtos-fonte.js"></script>
 <script src="pdf-lib.min.js"></script>
 <script>
 "use strict";
@@ -55,19 +56,22 @@ function ler(k, def) { try { const v = JSON.parse(localStorage.getItem(k)); retu
 function gravar(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
 
 /* Tipos contados: cada um é uma soma digitada (ex.: 15+20+12). Não há conversão entre eles. */
-const ORDEM = ["pallet", "lastro", "cx"];
-const ROT = { pallet: "Pallets", lastro: "Lastros", cx: "Caixas" };
-const ROT1 = { pallet: ["pallet", "pallets"], lastro: ["lastro", "lastros"], cx: ["caixa", "caixas"] };
+const ORDEM = ["pallet", "lastro", "cx", "un"];
+const ROT = { pallet: "Pallets", lastro: "Lastros", cx: "Caixas", un: "Unidades" };
+const ROT1 = { pallet: ["pallet", "pallets"], lastro: ["lastro", "lastros"], cx: ["caixa", "caixas"], un: ["unidade", "unidades"] };
+const qVazio = () => ({ pallet: "", lastro: "", cx: "", un: "" });
+// Colunas do relatório: as 3 de sempre; "Unidades" só aparece se algum produto tiver unidades.
+const colunasRel = (r) => ORDEM.filter((t) => t !== "un" || r.itens.some((i) => i.un));
 
 // Dados salvos pela versão anterior (linhas com fator) viram os três campos novos.
 function migrarItem(it) {
-  if (it.q && typeof it.q === "object") return it;
+  if (it.q && typeof it.q === "object") { if (it.q.un == null) it.q.un = ""; return it; }
   const q = { pallet: [], lastro: [], cx: [] };
   (it.linhas || []).forEach((l) => {
     const v = String(l && l.q || "").trim();
     if (l && q[l.tipo] && v) q[l.tipo].push(v);
   });
-  it.q = { pallet: q.pallet.join("+"), lastro: q.lastro.join("+"), cx: q.cx.join("+") };
+  it.q = { pallet: q.pallet.join("+"), lastro: q.lastro.join("+"), cx: q.cx.join("+"), un: "" };
   delete it.linhas;
   return it;
 }
@@ -90,9 +94,25 @@ const nomeLogin = () => { try { return ((RV.perfilCache() || {}).nome || "").tri
 const salvarAtual = () => gravar(K.atual, atual);
 
 /* ================= produtos ================= */
-const P = window.PRODUTOS || [];
-const PN = P.map((p) => norm(p[1]));
-const NOME = new Map(P.map((p) => [p[0], p[1]]));
+let P = [], PN = [], NOME = new Map();
+function indexarProdutos() { P = Catalogo.lista(); PN = P.map((p) => norm(p[1])); NOME = new Map(P.map((p) => [p[0], p[1]])); }
+indexarProdutos();
+// Quando a lista compartilhada chega (ou muda), a busca e os nomes já escolhidos acompanham.
+function atualizarNomes() {
+  if (!atual) return;
+  let mudou = false;
+  atual.itens.forEach((it, i) => {
+    const n = !it.custom && NOME.get(it.cod);
+    if (n && n !== it.nome) {
+      it.nome = n; mudou = true;
+      const el = document.querySelector('.pc[data-i="' + i + '"] .ph .t b');
+      if (el) el.textContent = n;
+    }
+  });
+  if (mudou) salvarAtual();
+}
+Catalogo.aoMudar(() => { indexarProdutos(); atualizarNomes(); if (typeof rota === "function" && rota() === "/buscar") atualizarBusca(); });
+Catalogo.carregar();
 
 function buscarProdutos(q) {
   const t = norm(q).trim().split(/\s+/).filter(Boolean);
@@ -157,12 +177,12 @@ function montarRelatorio(c) {
   const itens = [];
   c.itens.forEach((it) => {
     if (!temValido(it)) return;
-    itens.push({ cod: codExib(it), nome: it.nome, pallet: celula(it, "pallet"), lastro: celula(it, "lastro"), cx: celula(it, "cx") });
+    itens.push({ cod: codExib(it), nome: it.nome, pallet: celula(it, "pallet"), lastro: celula(it, "lastro"), cx: celula(it, "cx"), un: celula(it, "un") });
   });
   return { id: c.id, inicio: c.inicio, fim: c.fim || new Date().toISOString(), contador: c.contador || nomeLogin(), setor: c.setor || "", itens };
 }
 function totaisRelatorio(r) {
-  const tot = { pallet: 0, lastro: 0, cx: 0 };
+  const tot = { pallet: 0, lastro: 0, cx: 0, un: 0 };
   r.itens.forEach((i) => ORDEM.forEach((t) => { if (i[t]) tot[t] += i[t].t; }));
   ORDEM.forEach((t) => { tot[t] = Math.round(tot[t] * 100) / 100; });
   return tot;
@@ -181,7 +201,7 @@ function textoRelatorio(r) {
     }).join(" | ") + "\n";
   });
   const tot = totaisRelatorio(r);
-  t += "\n*Totais:* " + ORDEM.map((x) => ROT[x] + " " + fmt(tot[x])).join(" | ");
+  t += "\n*Totais:* " + colunasRel(r).map((x) => ROT[x] + " " + fmt(tot[x])).join(" | ");
   t += "\n" + r.itens.length + " " + plural(r.itens.length, "produto contado", "produtos contados");
   return t;
 }
@@ -194,7 +214,8 @@ async function gerarPdf(r) {
   const limpo = (s) => Array.from(String(s)).map((ch) => (suportado.has(ch.codePointAt(0)) ? ch : "?")).join("");
   const W = 595.28, H = 841.89, M = 40, FS = 9.5, LEAD = 12.5, PAD = 6;
   const cod = { x: M, w: 46 }, nome = { x: 90, w: 160 };
-  const cols = { pallet: { x: 255, w: 100 }, lastro: { x: 355, w: 100 }, cx: { x: 455, w: 100 } };
+  const usadas = colunasRel(r), lc = 300 / usadas.length, cols = {};
+  usadas.forEach((t, k) => { cols[t] = { x: 255 + k * lc, w: lc }; });
   const cinza = rgb(0.45, 0.45, 0.45), linha = rgb(0.85, 0.85, 0.85), zebra = rgb(0.965, 0.965, 0.955);
   function quebra(txt, fonte, tam, larg) {
     const palavras = limpo(txt).split(/\s+/).filter(Boolean);
@@ -223,7 +244,7 @@ async function gerarPdf(r) {
     const ty = y - 12;
     page.drawText("Cód.", { x: cod.x + 4, y: ty, size: 9, font: fb });
     page.drawText("Produto", { x: nome.x, y: ty, size: 9, font: fb });
-    ORDEM.forEach((t) => centro(page, ROT[t], fb, 9, cols[t], ty));
+    usadas.forEach((t) => centro(page, ROT[t], fb, 9, cols[t], ty));
     y -= 22;
   }
   function novaPagina() { page = doc.addPage([W, H]); y = H - M; }
@@ -255,7 +276,7 @@ async function gerarPdf(r) {
     const ln = quebra(it.nome, f, FS, nome.w);
     const ex = {};
     let altCel = 0;
-    ORDEM.forEach((t) => {
+    usadas.forEach((t) => {
       ex[t] = [];
       altCel = Math.max(altCel, it[t] ? 14 : 0);
     });
@@ -265,7 +286,7 @@ async function gerarPdf(r) {
     const ty = y - PAD - FS;
     if (it.cod) page.drawText(limpo(it.cod), { x: cod.x + 4, y: ty, size: FS, font: f });
     ln.forEach((t, k) => page.drawText(t, { x: nome.x, y: ty - k * LEAD, size: FS, font: f }));
-    ORDEM.forEach((t) => {
+    usadas.forEach((t) => {
       const c = it[t];
       if (!c) { centro(page, "-", f, 11, cols[t], ty, cinza); return; }
       centro(page, limpo(fmt(c.t)), fb, 12, cols[t], ty - 1);
@@ -412,17 +433,18 @@ function alternar(cod) {
     const it = atual.itens[idx];
     if (temDigitado(it) && !confirm("Remover " + it.nome + " e as quantidades já lançadas?")) return false;
     atual.itens.splice(idx, 1);
-  } else atual.itens.push({ cod, nome: NOME.get(cod) || cod, q: { pallet: "", lastro: "", cx: "" } });
+  } else atual.itens.push({ cod, nome: NOME.get(cod) || cod, q: qVazio() });
   salvarAtual();
   return true;
 }
 
 /* ================= tela: quantidades ================= */
+const EXEMPLO = { pallet: "Ex.: 15+20+12", lastro: "Ex.: 15+20+12", cx: "Ex.: 15+20+12", un: "Ex.: 24" };
 function campoHtml(it, t) {
   const v = valorTipo(it, t);
   const ruim = !!String(it.q[t] || "").trim() && isNaN(v);
   return `<div class="tq"><label>${ROT[t]}</label><div class="r">
-    <input class="qi ${ruim ? "bad" : ""}" data-t="${t}" inputmode="tel" autocomplete="off" placeholder="Ex.: 15+20+12" aria-label="${ROT[t]}" value="${esc(it.q[t])}">
+    <input class="qi ${ruim ? "bad" : ""}" data-t="${t}" inputmode="tel" autocomplete="off" placeholder="${EXEMPLO[t]}" aria-label="${ROT[t]}" value="${esc(it.q[t] || "")}">
     <button class="plus" type="button" data-t="${t}" aria-label="Somar mais um valor">＋</button>
     <span class="eq">= <b>${ruim ? "—" : fmt(v)}</b></span></div></div>`;
 }
@@ -431,16 +453,43 @@ function resumoItem(it) {
     .map((t) => ROT[t] + " <b>" + fmt(valorTipo(it, t)) + "</b>");
   return partes.length ? partes.join(" · ") : "Sem quantidade ainda";
 }
+// Cartões recolhíveis: o nome e o resumo ficam sempre à vista; os campos aparecem ao tocar.
+const abertos = new Set();
+function statusItem(it) {
+  if (temInvalido(it)) return ["bad", "!"];
+  if (temValido(it)) return ["ok", "✓"];
+  return ["vz", "○"];
+}
 function cartaoHtml(it, i) {
-  return `<div class="pc" data-i="${i}"><div class="ph"><div class="t"><b>${esc(it.nome)}</b>${codExib(it) ? `<span class="code">${esc(codExib(it))}</span>` : ""}</div>
-    <button class="xbtn" type="button" data-a="xitem" aria-label="Remover produto">✕</button></div>
-    <div class="resu">${resumoItem(it)}</div>
-    ${ORDEM.map((t) => campoHtml(it, t)).join("")}</div>`;
+  const aberto = abertos.has(it.cod), [sc, si] = statusItem(it);
+  return `<div class="pc ${aberto ? "open" : ""}" data-i="${i}">
+    <button class="ph" type="button" data-a="toggle" aria-expanded="${aberto}">
+      <span class="st ${sc}" aria-hidden="true">${si}</span>
+      <span class="t"><b>${esc(it.nome)}</b>${codExib(it) ? `<span class="code">${esc(codExib(it))}</span>` : ""}<span class="resu">${resumoItem(it)}</span></span>
+      <span class="chev" aria-hidden="true">▾</span>
+    </button>
+    <div class="pb">${ORDEM.map((t) => campoHtml(it, t)).join("")}
+      <div class="rem"><button class="btn" type="button" data-a="xitem">Remover produto</button></div></div></div>`;
+}
+// Abre um cartão e fecha os outros (economiza tela). Tocar no aberto fecha.
+function alternarCartao(card, focar) {
+  const abrir = !card.classList.contains("open");
+  document.querySelectorAll(".pc.open").forEach((c) => { c.classList.remove("open"); c.querySelector(".ph").setAttribute("aria-expanded", "false"); });
+  abertos.clear();
+  if (!abrir) return;
+  card.classList.add("open");
+  card.querySelector(".ph").setAttribute("aria-expanded", "true");
+  abertos.add(atual.itens[+card.dataset.i].cod);
+  requestAnimationFrame(() => {
+    card.scrollIntoView({ block: "start", behavior: "smooth" });
+    if (focar) { const q = card.querySelector(".qi"); if (q) q.focus({ preventScroll: true }); }
+  });
 }
 function vContar() {
   const n = atual.itens.length;
+  if (n === 1) abertos.add(atual.itens[0].cod); // só um produto: já vem aberto
   let h = `<div class="ico">🧮</div><h1>Quantidades</h1>
-    <p class="sub">Digite quantos <b>pallets</b>, <b>lastros</b> e <b>caixas soltas</b> há de cada produto. Para somar vários valores, use o <b>+</b>: <b>15+20+12</b>.</p>
+    <p class="sub">Toque no produto para abrir e digitar <b>pallets</b>, <b>lastros</b>, <b>caixas</b> soltas e <b>unidades</b>. Para somar vários valores, use o <b>+</b>: <b>15+20+12</b>.</p>
     <div class="row"><a class="btn" href="#/buscar">➕ Adicionar produto</a></div>`;
   h += n ? atual.itens.map(cartaoHtml).join("") : '<div class="empty">Nenhum produto marcado. Toque em “Adicionar produto”.</div>';
   view.innerHTML = h;
@@ -461,6 +510,8 @@ function atualizarCartao(card) {
     inp.closest(".r").querySelector(".eq b").textContent = ruim ? "—" : fmt(v);
   });
   card.querySelector(".resu").innerHTML = resumoItem(it);
+  const [sc, si] = statusItem(it), st = card.querySelector(".st");
+  st.className = "st " + sc; st.textContent = si;
   atualizarBarraContar();
 }
 
@@ -472,7 +523,7 @@ function vEnviar() {
   const r = relatorioAtual();
   const sem = atual.itens.filter((i) => !temValido(i) && !temInvalido(i));
   const inc = atual.itens.filter(temInvalido);
-  let h = `<div class="ico">📤</div><h1>Revisar e enviar</h1><p class="sub">Confira os totais. O PDF mostra os totais de pallets, lastros e caixas de cada produto.</p>
+  let h = `<div class="ico">📤</div><h1>Revisar e enviar</h1><p class="sub">Confira os totais. O PDF mostra os totais de cada produto (pallets, lastros, caixas e, se usar, unidades).</p>
     <div class="grid"><div class="field"><label for="ct">Contado por (automático, do seu login)</label><input id="ct" type="text" value="${esc(nomeLogin())}" readonly disabled></div>
     <div class="field"><label for="st">Setor / local (opcional)</label><input id="st" type="text" autocomplete="off" value="${esc(atual.setor || "")}" placeholder="Ex.: Armazém, Rua A"></div></div>`;
   if (inc.length) h += `<div class="callout red"><p>⚠️ Há valores que não consegui somar em: <b>${inc.map((i) => esc(i.nome)).join("; ")}</b>. Esses campos não entram na soma. Volte e corrija (use só números e + - * /).</p></div>`;
@@ -482,8 +533,8 @@ function vEnviar() {
     const tot = totaisRelatorio(r);
     h += '<div class="list resumo">' + r.itens.map((i) => {
       const det = "";
-      return `<div class="it"><div class="l1"><b>${esc(i.nome)}</b></div><div class="l1b">${ORDEM.map((t) => `<span class="${i[t] ? "" : "vz"}">${ROT[t]} <b>${i[t] ? fmt(i[t].t) : "—"}</b></span>`).join("")}</div>${det || i.cod ? `<div class="l2">${i.cod ? esc(i.cod) + (det ? " · " : "") : ""}${esc(det)}</div>` : ""}</div>`;
-    }).join("") + `<div class="it tt2"><div class="l1"><b>TOTAIS</b></div><div class="l1b">${ORDEM.map((t) => `<span>${ROT[t]} <b>${fmt(tot[t])}</b></span>`).join("")}</div></div></div>`;
+      return `<div class="it"><div class="l1"><b>${esc(i.nome)}</b></div><div class="l1b">${ORDEM.filter((t) => i[t]).map((t) => `<span>${ROT[t]} <b>${fmt(i[t].t)}</b></span>`).join("")}</div>${det || i.cod ? `<div class="l2">${i.cod ? esc(i.cod) + (det ? " · " : "") : ""}${esc(det)}</div>` : ""}</div>`;
+    }).join("") + `<div class="it tt2"><div class="l1"><b>TOTAIS</b></div><div class="l1b">${colunasRel(r).map((t) => `<span>${ROT[t]} <b>${fmt(tot[t])}</b></span>`).join("")}</div></div></div>`;
   } else h += '<div class="list"><div class="empty">Nenhuma quantidade lançada ainda.</div></div>';
   h += `<div class="callout blue"><p>O WhatsApp não deixa o app escolher o grupo sozinho. Ao tocar em <b>Enviar PDF</b>, o celular abre a lista de apps: escolha o WhatsApp e depois o grupo.</p></div>
     <div class="acoes">
@@ -519,7 +570,7 @@ view.addEventListener("click", async (e) => {
   if (t.id === "nadd") {
     const nome = $("#nn").value.trim().replace(/\s+/g, " ");
     if (!nome) { aviso("Informe o nome do produto."); return; }
-    atual.itens.push({ cod: "X" + novoId(), nome, custom: true, codUser: $("#nc").value.trim(), q: { pallet: "", lastro: "", cx: "" } });
+    atual.itens.push({ cod: "X" + novoId(), nome, custom: true, codUser: $("#nc").value.trim(), q: qVazio() });
     salvarAtual();
     $("#nn").value = ""; $("#nc").value = "";
     aviso("Produto adicionado à recontagem.");
@@ -543,11 +594,12 @@ view.addEventListener("click", async (e) => {
   const btn = t.closest("[data-a]");
   if (btn) {
     const a = btn.dataset.a;
+    if (a === "toggle") { alternarCartao(btn.closest(".pc"), true); return; }
     if (a === "xitem") {
       const i = +btn.closest(".pc").dataset.i;
       const it = atual.itens[i];
       if (temDigitado(it) && !confirm("Remover " + it.nome + " e as quantidades lançadas?")) return;
-      atual.itens.splice(i, 1); salvarAtual(); vContar();
+      abertos.delete(it.cod); atual.itens.splice(i, 1); salvarAtual(); vContar();
     } else if (a === "nova") {
       atual = { id: novoId(), inicio: new Date().toISOString(), itens: [], setor: "", contador: nomeLogin() };
       salvarAtual(); bq = ""; bmodo = "todos"; ir("/buscar");
@@ -618,7 +670,14 @@ async function importar(inp) {
   } catch (e) { aviso("Arquivo inválido. Use um backup exportado por este app."); }
 }
 // "Enter" no campo só fecha o teclado
-view.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.tagName === "INPUT") e.target.blur(); });
+view.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" || e.target.tagName !== "INPUT") return;
+  if (e.target.classList.contains("qi")) {
+    const todos = Array.from(e.target.closest(".pc").querySelectorAll(".qi")), k = todos.indexOf(e.target);
+    if (k >= 0 && k < todos.length - 1) { e.preventDefault(); todos[k + 1].focus(); return; }
+  }
+  e.target.blur();
+});
 
 render();
 </script>

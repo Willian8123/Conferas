@@ -18,21 +18,47 @@
   <h1>Produtos</h1>
   <p class="sub">Digite o <b>código</b> para ver o nome, ou o <b>nome</b> para achar o código. Toque na linha para copiar o código.</p>
 
+  <div class="cstatus" id="cStatus"></div>
+  <div class="callout blue hidden" id="cSemear"><span class="ci">📦</span><div><p><b>Lista compartilhada ainda não ativada.</b> Ao enviar a lista atual, todos os conferentes passam a usar a mesma lista, e o que você mudar vale para todos.</p>
+    <div class="row"><button class="btn primary" id="bSemear" type="button">Enviar a lista atual (<span id="nSemear">0</span> produtos)</button></div></div></div>
+  <div class="row hidden" id="cAcoes"><button class="btn" id="bNovo" type="button">➕ Novo produto</button></div>
+
   <div class="pbox"><input id="pq" class="search" type="search" inputmode="search" autocomplete="off" placeholder="Ex.: 2538  ·  pilsen 600  ·  guarana 2l" style="width:100%"></div>
   <div class="pmeta" id="pmeta"></div>
   <div id="plist"></div>
   <button class="btn pmore hidden" id="pmore">Mostrar mais</button>
 </div>
+
+<div class="modal hidden" id="mod" role="dialog" aria-modal="true" aria-labelledby="mTit">
+  <div class="mbox">
+    <h2 id="mTit">Novo produto</h2>
+    <div class="field"><label for="mCod">Código</label><input id="mCod" inputmode="numeric" autocomplete="off" maxlength="20"></div>
+    <div class="field" style="margin-top:10px"><label for="mNome">Nome do produto</label><input id="mNome" autocomplete="off" maxlength="120" style="text-transform:uppercase"></div>
+    <p class="rvsmall" id="mDica" style="margin:8px 0 0"></p>
+    <div class="callout red hidden" id="mErro"><p id="mErroTxt"></p></div>
+    <div class="row"><button class="btn primary" id="mSalvar" type="button">Salvar</button><button class="btn" id="mCancel" type="button">Cancelar</button><button class="btn danger" id="mExcluir" type="button">Excluir</button></div>
+  </div>
+</div>
+<div class="toast hidden" id="toast"></div>
 <script src="util.js"></script>
 <script src="produtos-dados.js"></script>
+<script src="produtos-fonte.js"></script>
 <script>
-const P=window.PRODUTOS||[];
-if(!P.length){const d=document.createElement("div");d.className="callout red";d.innerHTML="<p>⚠️ A lista de produtos não carregou. Confira se o arquivo <b>produtos-dados.js</b> está no GitHub (na mesma pasta do index.html) e atualize o app.</p>";document.querySelector(".pbox").before(d)}
+let P=[],PN=[];
 const norm=t=>t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-const PN=P.map(p=>norm(p[1]));
-const esc=t=>t.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
-const pq=document.getElementById("pq"),plist=document.getElementById("plist"),pmeta=document.getElementById("pmeta"),pmore=document.getElementById("pmore");
-let pres=[],pshow=60,ptoks=[];
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const $=id=>document.getElementById(id);
+const pq=$("pq"),plist=$("plist"),pmeta=$("pmeta"),pmore=$("pmore");
+let pres=[],pshow=60,ptoks=[],avisoLista=null;
+
+function indexar(){
+  P=Catalogo.lista();PN=P.map(p=>norm(p[1]));
+  if(!avisoLista&&!P.length){avisoLista=document.createElement("div");avisoLista.className="callout red";avisoLista.innerHTML="<p>⚠️ A lista de produtos não carregou. Confira se o arquivo <b>produtos-dados.js</b> está no GitHub (na mesma pasta do index.html) e atualize o app.</p>";document.querySelector(".pbox").before(avisoLista)}
+  else if(avisoLista&&P.length){avisoLista.remove();avisoLista=null}
+}
+let toastT;
+function aviso(msg){const t=$("toast");t.textContent=msg;t.classList.remove("hidden");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.add("hidden"),3200)}
+
 function hl(name){
   let h=esc(name);
   ptoks.filter(t=>t.length>1&&!/^\d+$/.test(t)||/^\d+$/.test(t)&&t.length>2).forEach(t=>{
@@ -42,8 +68,8 @@ function hl(name){
   return h;
 }
 function prender(){
-  const part=pres.slice(0,pshow);
-  plist.innerHTML=part.map(i=>`<div class="prod" data-c="${P[i][0]}"><span class="code">${P[i][0]}</span><span class="nm">${hl(P[i][1])}</span></div>`).join("");
+  const part=pres.slice(0,pshow),ed=Catalogo.editavel();
+  plist.innerHTML=part.map(i=>`<div class="prod" data-c="${esc(P[i][0])}"><span class="code">${esc(P[i][0])}</span><span class="nm">${hl(P[i][1])}</span>${ed?`<button class="edtbtn" type="button" data-e="${esc(P[i][0])}" aria-label="Editar ${esc(P[i][1])}">✏️</button>`:""}</div>`).join("");
   pmore.classList.toggle("hidden",pres.length<=pshow);
   pmore.textContent="Mostrar mais ("+(pres.length-pshow)+" restantes)";
   pmeta.textContent=pres.length?(pres.length+" de "+P.length+" produtos"):"Nenhum produto encontrado. Tente menos palavras.";
@@ -68,14 +94,83 @@ function pbuscar(){
 }
 pq.addEventListener("input",pbuscar);
 pmore.addEventListener("click",()=>{pshow+=100;prender()});
+
+/* ---- situação da lista e permissões ---- */
+function atualizarTela(){
+  indexar();
+  const E=Catalogo.estado,ed=Catalogo.editavel(),pode=Catalogo.permitido();
+  let st="";
+  if(E.fonte==="servidor")st=ed?"✅ Lista compartilhada: o que você mudar vale para todos os conferentes.":"✅ Lista compartilhada (somente consulta para o seu login).";
+  else if(E.tabela===false)st="ℹ️ Usando a lista do app. A lista compartilhada ainda não foi ativada no banco (peça ao administrador).";
+  else if(E.vazia)st="ℹ️ Usando a lista do app.";
+  else if(E.fonte==="cache")st="📴 Sem conexão: usando a última lista baixada. Para alterar produtos, conecte-se.";
+  else st="ℹ️ Usando a lista do app.";
+  $("cStatus").textContent=st;
+  $("cSemear").classList.toggle("hidden",!Catalogo.podeSemear());
+  $("nSemear").textContent=(window.PRODUTOS||[]).length;
+  $("cAcoes").classList.toggle("hidden",!ed);
+  pbuscar();
+}
+Catalogo.aoMudar(atualizarTela);
+
+$("bSemear").addEventListener("click",async()=>{
+  const b=$("bSemear");b.disabled=true;b.textContent="Enviando…";
+  try{const n=await Catalogo.semear();aviso(n+" produtos enviados. Lista compartilhada ativada!")}
+  catch(e){aviso(e.message)}
+  b.disabled=false;b.innerHTML='Enviar a lista atual (<span id="nSemear">'+(window.PRODUTOS||[]).length+'</span> produtos)';
+});
+
+/* ---- cadastrar / editar / excluir ---- */
+let editando=null;
+function abrir(cod){
+  editando=cod||null;
+  const p=cod?P.find(x=>x[0]===cod):null;
+  $("mTit").textContent=p?"Editar produto":"Novo produto";
+  $("mCod").value=p?p[0]:"";$("mNome").value=p?p[1]:"";
+  $("mExcluir").classList.toggle("hidden",!p);
+  $("mDica").textContent=p?"Se o código mudou, é só trocar aqui. Recontagens já iniciadas mantêm o código antigo.":"O nome é salvo em letras maiúsculas, como o resto da lista.";
+  $("mErro").classList.add("hidden");
+  $("mod").classList.remove("hidden");
+  setTimeout(()=>(p?$("mNome"):$("mCod")).focus(),50);
+}
+function fechar(){$("mod").classList.add("hidden");editando=null}
+function erroModal(t){$("mErroTxt").textContent=t;$("mErro").classList.remove("hidden")}
+function ocupado(v){["mSalvar","mCancel","mExcluir"].forEach(id=>$(id).disabled=v)}
+$("bNovo").addEventListener("click",()=>abrir(null));
+$("mCancel").addEventListener("click",fechar);
+$("mod").addEventListener("click",e=>{if(e.target.id==="mod")fechar()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("mod").classList.contains("hidden"))fechar()});
+$("mSalvar").addEventListener("click",async()=>{
+  $("mErro").classList.add("hidden");ocupado(true);
+  try{
+    const r=editando?await Catalogo.atualizar(editando,$("mCod").value,$("mNome").value):await Catalogo.criar($("mCod").value,$("mNome").value);
+    fechar();pq.value=r[0];pbuscar();aviso(editando===null?"Produto cadastrado.":"Produto atualizado.");
+  }catch(e){erroModal(e.message)}
+  ocupado(false);
+});
+$("mExcluir").addEventListener("click",async()=>{
+  const p=P.find(x=>x[0]===editando);if(!p)return;
+  if(!confirm("Excluir "+p[0]+" - "+p[1]+"?\nEle some da lista para todos os conferentes.")) return;
+  ocupado(true);
+  try{await Catalogo.excluir(editando);fechar();pbuscar();aviso("Produto excluído.")}
+  catch(e){erroModal(e.message)}
+  ocupado(false);
+});
+$("mCod").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("mNome").focus()}});
+$("mNome").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("mSalvar").click()}});
+
 plist.addEventListener("click",e=>{
+  const eb=e.target.closest(".edtbtn");
+  if(eb){abrir(eb.dataset.e);return}
   const r=e.target.closest(".prod");if(!r)return;
   const t=r.dataset.c;
   const done=()=>{r.classList.add("ok");setTimeout(()=>r.classList.remove("ok"),900)};
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,done)}else done();
 });
-pbuscar();
-document.getElementById("pq").focus();
+
+atualizarTela();
+Catalogo.carregar();
+$("pq").focus();
 </script>
 </body>
 </html>

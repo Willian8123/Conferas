@@ -10,10 +10,11 @@
 <link rel="stylesheet" href="ocorr.css">
 <link rel="stylesheet" href="paginas.css">
 <link rel="stylesheet" href="contagem.css">
+<script src="rv-config.js"></script><script src="rv.js"></script><script src="acesso.js" data-exigir="conferente"></script>
 </head>
 <body>
 <div class="wrap">
-  <a class="back" id="back" href="index.html">← Menu</a>
+  <a class="back" id="back" href="conferente.html">← Menu</a>
   <div id="view"></div>
 </div>
 <div class="fixa hidden" id="fixa"><div class="in"><div class="info" id="fInfo"></div><button class="btn primary" id="fBtn" type="button"></button></div></div>
@@ -84,7 +85,8 @@ let atual = ler(K.atual, null);
 if (atual && !Array.isArray(atual.itens)) atual = null;
 if (atual) atual.itens.forEach(migrarItem);
 let hist = ler(K.hist, []).map(migrarHist).filter(Boolean);
-let contador = ler(K.nome, "");
+// Quem está contando vem do login (automático). Primeiro nome + sobrenome como cadastrado.
+const nomeLogin = () => { try { return ((RV.perfilCache() || {}).nome || "").trim(); } catch (e) { return ""; } };
 const salvarAtual = () => gravar(K.atual, atual);
 
 /* ================= produtos ================= */
@@ -157,7 +159,7 @@ function montarRelatorio(c) {
     if (!temValido(it)) return;
     itens.push({ cod: codExib(it), nome: it.nome, pallet: celula(it, "pallet"), lastro: celula(it, "lastro"), cx: celula(it, "cx") });
   });
-  return { id: c.id, inicio: c.inicio, fim: c.fim || new Date().toISOString(), contador: c.contador || contador || "", setor: c.setor || "", itens };
+  return { id: c.id, inicio: c.inicio, fim: c.fim || new Date().toISOString(), contador: c.contador || nomeLogin(), setor: c.setor || "", itens };
 }
 function totaisRelatorio(r) {
   const tot = { pallet: 0, lastro: 0, cx: 0 };
@@ -330,7 +332,7 @@ function render() {
   if (r === "/buscar") { back.textContent = "← Recontagem"; back.href = atual.itens.length ? "#/contar" : "#/"; vBuscar(); }
   else if (r === "/contar") { back.textContent = "← Escolher produtos"; back.href = "#/buscar"; vContar(); }
   else if (r === "/enviar") { back.textContent = "← Quantidades"; back.href = "#/contar"; vEnviar(); }
-  else { back.textContent = "← Menu"; back.href = "index.html"; vInicio(); }
+  else { back.textContent = "← Menu"; back.href = "conferente.html"; vInicio(); }
   window.scrollTo(0, 0);
 }
 window.addEventListener("hashchange", render);
@@ -464,14 +466,14 @@ function atualizarCartao(card) {
 
 /* ================= tela: revisar e enviar ================= */
 function relatorioAtual() {
-  return montarRelatorio({ id: atual.id, inicio: atual.inicio, itens: atual.itens, contador: atual.contador, setor: atual.setor });
+  return montarRelatorio({ id: atual.id, inicio: atual.inicio, itens: atual.itens, contador: nomeLogin() || atual.contador, setor: atual.setor });
 }
 function vEnviar() {
   const r = relatorioAtual();
   const sem = atual.itens.filter((i) => !temValido(i) && !temInvalido(i));
   const inc = atual.itens.filter(temInvalido);
-  let h = `<div class="ico">📤</div><h1>Revisar e enviar</h1><p class="sub">Confira os totais. O PDF mostra pallets, lastros e caixas de cada produto, com as somas.</p>
-    <div class="grid"><div class="field"><label for="ct">Contado por</label><input id="ct" type="text" autocomplete="name" value="${esc(atual.contador != null ? atual.contador : contador)}" placeholder="Seu nome"></div>
+  let h = `<div class="ico">📤</div><h1>Revisar e enviar</h1><p class="sub">Confira os totais. O PDF mostra os totais de pallets, lastros e caixas de cada produto.</p>
+    <div class="grid"><div class="field"><label for="ct">Contado por (automático, do seu login)</label><input id="ct" type="text" value="${esc(nomeLogin())}" readonly disabled></div>
     <div class="field"><label for="st">Setor / local (opcional)</label><input id="st" type="text" autocomplete="off" value="${esc(atual.setor || "")}" placeholder="Ex.: Armazém, Rua A"></div></div>`;
   if (inc.length) h += `<div class="callout red"><p>⚠️ Há valores que não consegui somar em: <b>${inc.map((i) => esc(i.nome)).join("; ")}</b>. Esses campos não entram na soma. Volte e corrija (use só números e + - * /).</p></div>`;
   if (sem.length) h += `<div class="callout yellow"><p>${sem.length} ${plural(sem.length, "produto sem quantidade não entra", "produtos sem quantidade não entram")} no relatório: <b>${sem.map((i) => esc(i.nome)).join("; ")}</b>. Se o estoque for zero, digite <b>0</b>.</p></div>`;
@@ -498,7 +500,6 @@ function vEnviar() {
 view.addEventListener("input", (e) => {
   const t = e.target;
   if (t.id === "bq") { bq = t.value; bshow = 60; atualizarBusca(); return; }
-  if (t.id === "ct") { atual.contador = t.value; contador = t.value; gravar(K.nome, contador); salvarAtual(); return; }
   if (t.id === "st") { atual.setor = t.value; salvarAtual(); return; }
   if (t.classList.contains("qi")) {
     const card = t.closest(".pc");
@@ -548,7 +549,7 @@ view.addEventListener("click", async (e) => {
       if (temDigitado(it) && !confirm("Remover " + it.nome + " e as quantidades lançadas?")) return;
       atual.itens.splice(i, 1); salvarAtual(); vContar();
     } else if (a === "nova") {
-      atual = { id: novoId(), inicio: new Date().toISOString(), itens: [], setor: "", contador };
+      atual = { id: novoId(), inicio: new Date().toISOString(), itens: [], setor: "", contador: nomeLogin() };
       salvarAtual(); bq = ""; bmodo = "todos"; ir("/buscar");
     } else if (a === "continuar") ir("/contar");
     else if (a === "descartar") {

@@ -6,89 +6,78 @@
 <meta name="theme-color" content="#37352f">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Rotinas">
+<meta name="apple-mobile-web-app-title" content="CDD Embu">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>Rotinas do Conferente</title>
+<title>CDD Embu</title>
 <link rel="stylesheet" href="ocorr.css">
 <link rel="stylesheet" href="paginas.css">
+<link rel="stylesheet" href="rv.css">
 </head>
 <body>
 <div class="wrap">
-  <div class="ico">📋</div>
-  <h1>Rotinas do Conferente</h1>
+  <div class="ico">🏭</div>
+  <h1>CDD Embu</h1>
   <p class="sub">Ambev · Escolha uma opção</p>
-  <div class="sec">Fluxos do dia</div>
-  <div class="menu cols">
-    <a class="item" href="retorno.html">
-      <span class="e">🔄</span>
-      <div><b>Retorno de rota</b><span>Prestação de contas, painéis, refugo</span></div>
+
+  <div class="quem" id="quem"></div>
+
+  <div class="portas">
+    <a class="porta" href="conferente.html" data-perm="conferente">
+      <span class="pi">📋</span>
+      <div><b>Conferente</b><span>Rotinas, produtos, recontagem e checklist</span></div>
       <span class="go">›</span>
     </a>
-    <a class="item" href="puxada.html">
-      <span class="e">🚚</span>
-      <div><b>Puxada / Empurrada</b><span>Placa, OP, mapas e NF</span></div>
+    <a class="porta" href="rv.html" data-perm="">
+      <span class="pi" id="piLobinho"><img src="lobinho.png" alt="" onerror="this.parentNode.textContent='🐺'"></span>
+      <div><b>Lobinho</b><span>Minha RV: valores e indicadores do mês</span></div>
       <span class="go">›</span>
     </a>
-    <a class="item" href="carregamento.html">
-      <span class="e">📦</span>
-      <div><b>Carregamento</b><span>Blitz, reposição, produtividade</span></div>
-      <span class="go">›</span>
-    </a>
-    <a class="item" href="controle.html">
-      <span class="e">🏷️</span>
-      <div><b>Controle</b><span>Etiquetas, PCF e mapa negativo</span></div>
-      <span class="go">›</span>
-    </a>
-  </div>
-  <div class="sec">Consultas</div>
-  <div class="menu cols">
-    <a class="item" href="produtos.html">
-      <span class="e">🔎</span>
-      <div><b>Produtos</b><span>Buscar código ou nome do item</span></div>
-      <span class="go">›</span>
-    </a>
-    <a class="item" href="rotinas.html">
-      <span class="e">🗂️</span>
-      <div><b>Todas as rotinas</b><span>Buscar qualquer código de rotina</span></div>
-      <span class="go">›</span>
-    </a>
-    <a class="item" href="procedimentos.html">
-      <span class="e">📝</span>
-      <div><b>Passo a passo</b><span>Placa, NF manual, quebrar mapa, WMS, SAP</span></div>
-      <span class="go">›</span>
-    </a>
-    <a class="item" href="referencias.html">
-      <span class="e">📚</span>
-      <div><b>Referências</b><span>Centros das fábricas e chamados STI</span></div>
-      <span class="go">›</span>
-    </a>
-  </div>
-  <div class="sec">Dia a dia</div>
-  <div class="menu cols">
-    <a class="item" href="ocorrencias.html">
-      <span class="e">📨</span>
+    <a class="porta" href="ocorrencias.html" data-perm="ocorrencias">
+      <span class="pi">📨</span>
       <div><b>Ocorrências</b><span>Abrir chamado e cadastro de fábricas</span></div>
       <span class="go">›</span>
     </a>
-    <a class="item" href="contagem.html">
-      <span class="e">🧮</span>
-      <div><b>Recontagem</b><span>Contar pallets, lastros e caixas e enviar o PDF</span></div>
-      <span class="go">›</span>
-    </a>
-    <a class="item" href="rv.html">
-      <span class="e">💰</span>
-      <div><b>Consulte sua RV</b><span>Veja sua remuneração variável e indicadores</span></div>
-      <span class="go">›</span>
-    </a>
-    <a class="item" href="checklist.html">
-      <span class="e">✅</span>
-      <div><b>Checklist do turno</b><span>Marque o que já foi feito</span></div>
-      <span class="go">›</span>
-    </a>
   </div>
+  <p class="rvsmall" id="admLink" style="display:none;margin-top:18px"><a href="rv-admin.html">🛠️ Painel do administrador</a></p>
 </div>
+<script src="rv-config.js"></script>
+<script src="rv.js"></script>
 <script src="util.js"></script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const esc = RV.esc;
+  const portas = Array.from(document.querySelectorAll(".porta"));
+  portas.forEach((a) => { a.dataset.dest = a.getAttribute("href"); });
+
+  function pode(p, perm) {
+    if (!perm || p.admin) return true;
+    const a = p.acessos || [];
+    return perm === "conferente" ? a.includes("conferente") : (a.includes("ocorrencias") || a.includes("conferente"));
+  }
+  function desenhar() {
+    const p = RV.logado() ? RV.perfilCache() : null;
+    if (p) {
+      $("quem").innerHTML = '<span>Olá, <b>' + esc(p.nome.trim().split(/\s+/)[0]) + '</b></span><button class="btn mini" id="bSair" type="button">Sair</button>';
+      $("bSair").addEventListener("click", async () => { await RV.sair(); desenhar(); });
+    } else {
+      $("quem").innerHTML = '<span>Entre com a sua matrícula para abrir as opções.</span><a class="btn mini primary" href="entrar.html">Entrar</a>';
+    }
+    portas.forEach((a) => {
+      const liberada = !!p && pode(p, a.getAttribute("data-perm"));
+      a.style.display = p && !liberada ? "none" : "";
+      a.setAttribute("href", p ? a.dataset.dest : "entrar.html?volta=" + encodeURIComponent(a.dataset.dest));
+    });
+    $("admLink").style.display = p && p.admin ? "block" : "none";
+  }
+  desenhar();
+  // atualiza o perfil em segundo plano (os acessos podem ter mudado)
+  if (RV.logado()) RV.meuPerfil().then(desenhar).catch((e) => {
+    if (e.status === 400 || e.status === 401 || e.status === 403) RV.sair().then(desenhar);
+  });
+})();
+</script>
 </body>
 </html>

@@ -2,6 +2,7 @@
 (function () {
   const C = window.RV_CONFIG;
   const KEY = "rv_sessao_v1";
+  const PK = "rv_perfil_v1";
   let mem = null;
 
   // ---------- sessão ----------
@@ -13,6 +14,15 @@
   function gravarSessao(s) {
     mem = s;
     try { s ? localStorage.setItem(KEY, JSON.stringify(s)) : localStorage.removeItem(KEY); } catch (e) {}
+    if (!s) { try { localStorage.removeItem(PK); } catch (e) {} }
+  }
+  // Cópia do perfil (nome, cargo, acessos) para abrir as telas mesmo sem internet.
+  // Não guarda nenhum dado de RV.
+  function perfilCache() {
+    try { return JSON.parse(localStorage.getItem(PK) || "null"); } catch (e) { return null; }
+  }
+  function guardarPerfil(p) {
+    try { localStorage.setItem(PK, JSON.stringify({ id: p.id, matricula: p.matricula, nome: p.nome, cargo: p.cargo, admin: !!p.admin, acessos: p.acessos || [] })); } catch (e) {}
   }
   function daResposta(r) {
     return {
@@ -101,7 +111,9 @@
 
   async function meuPerfil() {
     const r = await api("/rest/v1/perfis?select=*&id=eq." + encodeURIComponent(userId()));
-    return r && r[0] || null;
+    const p = r && r[0] || null;
+    if (p) guardarPerfil(p);
+    return p;
   }
   async function config() {
     const r = await api("/rest/v1/rv_config?select=config&id=eq.1");
@@ -204,6 +216,6 @@
     return primeiro;
   }
 
-  window.RV = { entrar, sair, logado, userId, trocarSenha, meuPerfil, config, dadosDe, rpc, api, emailDe, painel,
+  window.RV = { entrar, sair, logado, userId, perfilCache, guardarPerfil, trocarSenha, meuPerfil, config, dadosDe, rpc, api, emailDe, painel,
     esc, moeda, numero, num, mesLongo, mesCurto, dataHora };
 })();

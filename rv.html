@@ -7,96 +7,57 @@
 <meta name="robots" content="noindex">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
-<title>Consulte sua RV</title>
+<title>Lobinho</title>
 <link rel="stylesheet" href="ocorr.css">
 <link rel="stylesheet" href="paginas.css">
 <link rel="stylesheet" href="rv.css">
+<script src="rv-config.js"></script><script src="rv.js"></script><script src="acesso.js" data-exigir=""></script>
 </head>
 <body>
 <div class="wrap">
   <a class="back" href="index.html">← Início</a>
 
-  <!-- LOGIN -->
-  <section id="vLogin" class="hidden">
-    <div class="ico">💰</div>
-    <h1>Consulte sua RV</h1>
-    <p class="sub">Entre com a sua matrícula e a senha que o administrador te passou.</p>
-    <form id="fLogin" class="rvlogin" novalidate>
-      <div class="field"><label for="mat">Matrícula</label><input id="mat" inputmode="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
-      <div class="field"><label for="sen">Senha</label><input id="sen" type="password" autocomplete="current-password"></div>
-      <div class="callout red hidden" id="erroLogin"><p id="erroLoginTxt"></p></div>
-      <div class="row"><button class="btn primary big" id="btnEntrar" type="submit">Entrar</button></div>
-      <p class="rvsmall">Esqueceu a senha? Peça uma nova ao administrador.</p>
-    </form>
-  </section>
+  <div class="lobo"><span class="lobo-i" id="loboIco"><img src="lobinho.png" alt="Lobinho" class="rvlogo" onerror="this.parentNode.textContent='🐺'"></span></div>
+  <h1 id="ola">Lobinho</h1>
+  <p class="sub" id="quem">Minha RV</p>
+  <div id="painel"></div>
 
-  <!-- PAINEL -->
-  <section id="vPainel" class="hidden">
-    <div class="rvtopo">
-      <div>
-        <h1 id="ola">Olá</h1>
-        <p class="sub" id="quem"></p>
-      </div>
-    </div>
-    <div id="painel"></div>
-    <div class="sec">Conta</div>
-    <div class="row">
-      <button class="btn" id="btnSenha" type="button">🔑 Trocar senha</button>
-      <button class="btn" id="btnSair" type="button">Sair</button>
-      <a class="btn hidden" id="lnkAdmin" href="rv-admin.html">🛠️ Administrador</a>
-    </div>
-    <form id="fSenha" class="hidden" novalidate>
-      <div class="field" style="margin-top:8px"><label for="ns">Nova senha (mínimo 8 caracteres)</label><input id="ns" type="password" autocomplete="new-password"></div>
-      <div class="field" style="margin-top:8px"><label for="ns2">Repita a nova senha</label><input id="ns2" type="password" autocomplete="new-password"></div>
-      <div class="callout hidden" id="msgSenha"><p id="msgSenhaTxt"></p></div>
-      <div class="row"><button class="btn primary" type="submit">Salvar nova senha</button></div>
-    </form>
-  </section>
-
-  <div id="carregando" class="rvsmall" style="margin-top:40px;text-align:center">Carregando…</div>
+  <div class="sec">Conta</div>
+  <div class="row">
+    <button class="btn" id="btnSenha" type="button">🔑 Trocar senha</button>
+    <button class="btn" id="btnSair" type="button">Sair</button>
+    <a class="btn hidden" id="lnkAdmin" href="rv-admin.html">🛠️ Administrador</a>
+  </div>
+  <form id="fSenha" class="hidden" novalidate>
+    <div class="field" style="margin-top:8px"><label for="ns">Nova senha (mínimo 8 caracteres)</label><input id="ns" type="password" autocomplete="new-password"></div>
+    <div class="field" style="margin-top:8px"><label for="ns2">Repita a nova senha</label><input id="ns2" type="password" autocomplete="new-password"></div>
+    <div class="callout hidden" id="msgSenha"><p id="msgSenhaTxt"></p></div>
+    <div class="row"><button class="btn primary" type="submit">Salvar nova senha</button></div>
+  </form>
 </div>
-<script src="rv-config.js"></script>
-<script src="rv.js"></script>
 <script src="util.js"></script>
 <script>
   const $ = (id) => document.getElementById(id);
-  const mostrar = (id) => ["vLogin", "vPainel", "carregando"].forEach((x) => $(x).classList.toggle("hidden", x !== id));
   const aviso = (box, txt, cor) => { $(box).className = "callout " + (cor || "red"); $(box + "Txt").textContent = txt; };
 
   async function abrir() {
-    mostrar("carregando");
+    $("painel").innerHTML = '<p class="rvsmall" style="text-align:center;margin:30px 0">Carregando…</p>';
     try {
       const perfil = await RV.meuPerfil();
-      if (!perfil) { await RV.sair(); return login("Este login não tem acesso. Fale com o administrador."); }
+      if (!perfil) { await RV.sair(); return location.replace("entrar.html?volta=rv.html"); }
       const [cfg, linhas] = await Promise.all([RV.config(), RV.dadosDe(perfil.matricula)]);
       $("ola").textContent = "Olá, " + (perfil.nome || "").trim().split(/\s+/)[0] + " 👋";
-      $("quem").textContent = [perfil.cargo, "Matrícula " + perfil.matricula].filter(Boolean).join(" · ");
+      $("quem").textContent = ["Lobinho · Minha RV", perfil.cargo, "Matrícula " + perfil.matricula].filter(Boolean).join(" · ");
       $("lnkAdmin").classList.toggle("hidden", !perfil.admin);
       if (!cfg) $("painel").innerHTML = '<div class="callout yellow"><p>O painel ainda não foi configurado pelo administrador.</p></div>';
       else RV.painel($("painel"), perfil, linhas, cfg, {});
-      mostrar("vPainel");
     } catch (e) {
-      if (e.status === 401 || e.status === 403) { await RV.sair(); return login(""); }
-      mostrar("vPainel");
-      $("painel").innerHTML = '<div class="callout red"><p>' + RV.esc(e.message) + '</p></div><div class="row"><button class="btn" onclick="abrir()">Tentar de novo</button></div>';
+      if (e.status === 400 || e.status === 401 || e.status === 403) { await RV.sair(); return location.replace("entrar.html?volta=rv.html"); }
+      $("painel").innerHTML = '<div class="callout red"><p>' + RV.esc(e.message) + '</p></div><div class="row"><button class="btn" id="btnDeNovo">Tentar de novo</button></div>';
+      $("btnDeNovo").addEventListener("click", abrir);
     }
   }
-  function login(msg) {
-    mostrar("vLogin");
-    if (msg) aviso("erroLogin", msg); else $("erroLogin").classList.add("hidden");
-    $("sen").value = "";
-  }
-
-  $("fLogin").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const m = $("mat").value.trim(), s = $("sen").value;
-    if (!m || !s) return aviso("erroLogin", "Preencha a matrícula e a senha.");
-    $("btnEntrar").disabled = true; $("btnEntrar").textContent = "Entrando…";
-    try { await RV.entrar(m, s); await abrir(); }
-    catch (err) { aviso("erroLogin", err.message); }
-    finally { $("btnEntrar").disabled = false; $("btnEntrar").textContent = "Entrar"; }
-  });
-  $("btnSair").addEventListener("click", async () => { await RV.sair(); $("mat").value = ""; login(""); });
+  $("btnSair").addEventListener("click", async () => { await RV.sair(); location.href = "index.html"; });
   $("btnSenha").addEventListener("click", () => $("fSenha").classList.toggle("hidden"));
   $("fSenha").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -107,8 +68,7 @@
     try { await RV.trocarSenha(a); $("ns").value = $("ns2").value = ""; aviso("msgSenha", "Senha alterada com sucesso.", "green"); }
     catch (err) { aviso("msgSenha", err.message); }
   });
-
-  if (RV.logado()) abrir(); else login("");
+  if (RV.logado()) abrir();
 </script>
 </body>
 </html>

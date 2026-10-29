@@ -11,22 +11,11 @@
 <link rel="stylesheet" href="ocorr.css">
 <link rel="stylesheet" href="paginas.css">
 <link rel="stylesheet" href="rv.css">
+<script src="rv-config.js"></script><script src="rv.js"></script><script src="acesso.js" data-exigir="admin"></script>
 </head>
 <body>
 <div class="wrap" style="max-width:860px">
-  <a class="back" href="rv.html">← Consulta de RV</a>
-
-  <section id="vLogin" class="hidden">
-    <div class="ico">🛠️</div>
-    <h1>Administrador da RV</h1>
-    <p class="sub">Entre com a matrícula e a senha de administrador.</p>
-    <form id="fLogin" class="rvlogin" novalidate>
-      <div class="field"><label for="mat">Matrícula</label><input id="mat" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
-      <div class="field"><label for="sen">Senha</label><input id="sen" type="password" autocomplete="current-password"></div>
-      <div class="callout red hidden" id="erroLogin"><p id="erroLoginTxt"></p></div>
-      <div class="row"><button class="btn primary big" id="btnEntrar" type="submit">Entrar</button></div>
-    </form>
-  </section>
+  <a class="back" href="index.html">← Início</a>
 
   <section id="vAdmin" class="hidden">
     <div class="rvtopo">
@@ -34,7 +23,7 @@
       <button class="btn mini" id="btnSair" type="button">Sair</button>
     </div>
     <div class="tabs" id="tabs">
-      <button class="tab on" data-t="func">👥 Funcionários</button>
+      <button class="tab on" data-t="func">👥 Pessoas e acessos</button>
       <button class="tab" data-t="imp">📥 Importar planilha</button>
       <button class="tab" data-t="cfg">🎛️ Painel</button>
       <button class="tab" data-t="ver">👁️ Ver como funcionário</button>
@@ -55,12 +44,21 @@
           <div class="field"><label for="nCargo">Cargo (opcional)</label><input id="nCargo" autocomplete="off"></div>
           <div class="field"><label for="nSenha">Senha (mínimo 8)</label><input id="nSenha" autocomplete="off" class="senha"></div>
         </div>
+        <div class="field" style="margin-top:12px"><label for="nNivel">Nível de acesso</label>
+          <select id="nNivel">
+            <option value="lobinho">Só Lobinho (consultar a própria RV)</option>
+            <option value="ocorr">Lobinho + Ocorrências (ex.: operador de empilhadeira)</option>
+            <option value="conf">Lobinho + Conferente + Ocorrências</option>
+          </select>
+          <span class="hint">Preenche sozinho pelo cargo (conferente / empilhadeira). Você pode mudar.</span></div>
         <label class="chk"><input type="checkbox" id="nAdmin"> Também é administrador</label>
         <div class="row"><button class="btn" type="button" id="btnGerar">🎲 Gerar senha</button><button class="btn primary" type="submit">Criar funcionário</button></div>
       </form>
       <div class="callout hidden" id="msgNovo"><p id="msgNovoTxt"></p></div>
 
       <div class="sec">Cadastrados <small id="totFunc"></small></div>
+      <div class="field" style="margin-bottom:8px"><label for="fFiltro">Mostrar</label>
+        <select id="fFiltro"><option value="">Todos</option><option value="conf">Conferentes</option><option value="ocorr">Operadores (Ocorrências)</option><option value="lobinho">Só Lobinho</option><option value="admin">Administradores</option></select></div>
       <div class="list" id="listaFunc"></div>
       <div class="callout hidden" id="msgFunc"><p id="msgFuncTxt"></p></div>
     </div>
@@ -118,16 +116,14 @@
   </div>
   <div id="carregando" class="rvsmall" style="margin-top:40px;text-align:center">Carregando…</div>
 </div>
-<script src="rv-config.js"></script>
-<script src="rv.js"></script>
 <script src="rv-planilha.js"></script>
 <script src="util.js"></script>
 <script>
 (function () {
   const $ = (id) => document.getElementById(id);
   const esc = RV.esc;
-  const vistas = ["vLogin", "vAdmin", "semAcesso", "carregando"];
-  const mostrar = (id) => vistas.forEach((x) => $(x).classList.toggle("hidden", x !== id));
+  const vistas = ["vAdmin", "semAcesso", "carregando"];
+  const mostrar = (id) => vistas.forEach((x) => { const el = $(x); if (el) el.classList.toggle("hidden", x !== id); }); // a guarda pode trocar a tela por "Sem acesso"
   function aviso(box, txt, cor, html) {
     const b = $(box); b.className = "callout " + (cor || "red");
     if (html) $(box + "Txt").innerHTML = txt; else $(box + "Txt").textContent = txt;
@@ -152,7 +148,7 @@
     mostrar("carregando");
     try {
       eu = await RV.meuPerfil();
-      if (!eu) { await RV.sair(); return login("Login sem acesso."); }
+      if (!eu) { await RV.sair(); return login(); }
       if (!eu.admin) return mostrar("semAcesso");
       $("quem").textContent = eu.nome + " · matrícula " + eu.matricula;
       cfg = (await RV.config()) || { indicadores: [], composicao: [] };
@@ -161,20 +157,12 @@
       await carregarColunas();
       desenharCfg();
     } catch (e) {
-      if (e.status === 401 || e.status === 403) { await RV.sair(); return login(""); }
+      if (e.status === 400 || e.status === 401 || e.status === 403) { await RV.sair(); return login(); }
       mostrar("vAdmin"); aviso("msgFunc", e.message);
     }
   }
-  function login(msg) { mostrar("vLogin"); if (msg) aviso("erroLogin", msg); else $("erroLogin").className = "callout red hidden"; $("sen").value = ""; }
-  $("fLogin").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const m = $("mat").value.trim(), s = $("sen").value;
-    if (!m || !s) return aviso("erroLogin", "Preencha a matrícula e a senha.");
-    $("btnEntrar").disabled = true;
-    try { await RV.entrar(m, s); await abrir(); } catch (err) { aviso("erroLogin", err.message); }
-    finally { $("btnEntrar").disabled = false; }
-  });
-  const sair = async () => { await RV.sair(); login(""); };
+  const login = () => location.replace("entrar.html?volta=rv-admin.html");
+  const sair = async () => { await RV.sair(); location.href = "index.html"; };
   $("btnSair").addEventListener("click", sair); $("btnSair2").addEventListener("click", sair);
 
   $("tabs").addEventListener("click", (e) => {
@@ -185,15 +173,37 @@
     if (b.dataset.t === "cfg") carregarColunas().then(desenharCfg);
   });
 
+  // ---------- níveis de acesso ----------
+  const NIVEIS = { lobinho: [], ocorr: ["ocorrencias"], conf: ["conferente", "ocorrencias"] };
+  const NOMES = { lobinho: "Só Lobinho", ocorr: "Ocorrências", conf: "Conferente" };
+  const nivelDe = (p) => (p.acessos || []).includes("conferente") ? "conf" : (p.acessos || []).includes("ocorrencias") ? "ocorr" : "lobinho";
+  const nivelPorCargo = (c) => /conferente/i.test(c || "") ? "conf" : /empilhadeira/i.test(c || "") ? "ocorr" : "lobinho";
+  const optsNivel = (atual) => Object.keys(NOMES).map((k) => `<option value="${k}" ${k === atual ? "selected" : ""}>${NOMES[k]}</option>`).join("");
+  let editAc = null;
+
   // ---------- funcionários ----------
   async function recarregarFunc() {
     perfis = await RV.api("/rest/v1/perfis?select=*&order=matricula.asc");
-    $("totFunc").textContent = perfis.length + (perfis.length === 1 ? " pessoa" : " pessoas");
-    $("listaFunc").innerHTML = perfis.map((p) => `<div class="li"><div class="t"><b>${esc(p.nome)}</b>${p.admin ? ' <span class="tag t-proc" style="display:inline">admin</span>' : ""}<span>${esc(p.matricula)}${p.cargo ? " · " + esc(p.cargo) : ""}</span></div>
-      <button class="btn mini" data-a="senha" data-m="${esc(p.matricula)}">Nova senha</button>
-      ${p.matricula === eu.matricula ? "" : `<button class="btn mini danger" data-a="del" data-m="${esc(p.matricula)}">Excluir</button>`}</div>`).join("") || '<div class="empty">Ninguém cadastrado.</div>';
+    desenharLista();
     await atualizarFaltantes();
   }
+  function desenharLista() {
+    const f = $("fFiltro").value;
+    const lista = perfis.filter((p) => !f || (f === "admin" ? p.admin : (!p.admin && nivelDe(p) === f)));
+    $("totFunc").textContent = lista.length + (lista.length === 1 ? " pessoa" : " pessoas") + (f ? " (de " + perfis.length + ")" : "");
+    $("listaFunc").innerHTML = lista.map((p) => {
+      const n = nivelDe(p);
+      const chip = p.admin ? '<span class="tag t-proc" style="display:inline">administrador · acesso total</span>' : `<span class="tag ${n === "conf" ? "t-carreg" : n === "ocorr" ? "t-puxada" : "t-retorno"}" style="display:inline">${NOMES[n]}</span>`;
+      const ed = editAc === p.matricula ? `<div style="flex-basis:100%;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-top:6px">
+          <div class="field" style="flex:1;min-width:180px;padding:6px 10px"><label>Nível de acesso</label><select id="eNivel">${optsNivel(n)}</select></div>
+          <button class="btn mini primary" data-a="acSalvar" data-m="${esc(p.matricula)}">Salvar</button><button class="btn mini" data-a="acCancelar">Cancelar</button></div>` : "";
+      return `<div class="li" style="flex-wrap:wrap"><div class="t"><b>${esc(p.nome)}</b> ${chip}<span>${esc(p.matricula)}${p.cargo ? " · " + esc(p.cargo) : ""}</span></div>
+        ${p.admin ? "" : `<button class="btn mini" data-a="acesso" data-m="${esc(p.matricula)}">Acessos</button>`}
+        <button class="btn mini" data-a="senha" data-m="${esc(p.matricula)}">Nova senha</button>
+        ${p.matricula === eu.matricula ? "" : `<button class="btn mini danger" data-a="del" data-m="${esc(p.matricula)}">Excluir</button>`}${ed}</div>`;
+    }).join("") || '<div class="empty">Ninguém por aqui.</div>';
+  }
+  $("fFiltro").addEventListener("change", desenharLista);
   async function faltantes() {
     const col = cfg.colMatricula || "Matricula", nomeCol = cfg.colNome || "Nome", cargoCol = cfg.colCargo || "Cargo";
     const linhas = await tudo("/rest/v1/rv_dados?select=matricula,dados&order=mes.desc");
@@ -213,13 +223,14 @@
     const ok = [], erros = [];
     for (const p of f) {
       const senha = gerarSenha();
-      try { await RV.rpc("admin_criar_usuario", { p_matricula: p.matricula, p_nome: p.nome, p_cargo: p.cargo || null, p_senha: senha, p_admin: false }); ok.push({ ...p, senha }); }
+      const nivel = nivelPorCargo(p.cargo);
+      try { await RV.rpc("admin_criar_usuario", { p_matricula: p.matricula, p_nome: p.nome, p_cargo: p.cargo || null, p_senha: senha, p_admin: false, p_acessos: NIVEIS[nivel] }); ok.push({ ...p, senha, nivel: NOMES[nivel] }); }
       catch (e) { erros.push(p.matricula + ": " + e.message); }
     }
     let h = "";
     if (ok.length) {
       h += `<div class="callout green"><span class="ci">✅</span><p>${ok.length} login(s) criado(s). <b>Guarde esta lista agora</b>: as senhas não ficam salvas em lugar nenhum.</p></div>
-        <div class="pre"><table><thead><tr><th>Matrícula</th><th>Nome</th><th>Senha</th></tr></thead><tbody>${ok.map((o) => `<tr><td>${esc(o.matricula)}</td><td>${esc(o.nome)}</td><td class="senha">${esc(o.senha)}</td></tr>`).join("")}</tbody></table></div>
+        <div class="pre"><table><thead><tr><th>Matrícula</th><th>Nome</th><th>Senha</th><th>Acesso</th></tr></thead><tbody>${ok.map((o) => `<tr><td>${esc(o.matricula)}</td><td>${esc(o.nome)}</td><td class="senha">${esc(o.senha)}</td><td>${esc(o.nivel)}</td></tr>`).join("")}</tbody></table></div>
         <div class="row"><button class="btn" id="btnCsv" type="button">⬇️ Baixar lista (CSV)</button></div>`;
     }
     if (erros.length) h += `<div class="callout red"><p>Não consegui criar: ${esc(erros.join(" | "))}</p></div>`;
@@ -228,11 +239,12 @@
     await recarregarFunc();
   });
   function baixarCsv(lista) {
-    const linhas = ["Matricula;Nome;Senha"].concat(lista.map((o) => [o.matricula, o.nome, o.senha].map((x) => '"' + String(x).replace(/"/g, '""') + '"').join(";")));
+    const linhas = ["Matricula;Nome;Senha;Acesso"].concat(lista.map((o) => [o.matricula, o.nome, o.senha, o.nivel || ""].map((x) => '"' + String(x).replace(/"/g, '""') + '"').join(";")));
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob(["﻿" + linhas.join("\r\n")], { type: "text/csv;charset=utf-8" }));
     a.download = "logins-rv.csv"; document.body.appendChild(a); a.click(); a.remove();
   }
+  $("nCargo").addEventListener("input", () => { $("nNivel").value = nivelPorCargo($("nCargo").value); });
   $("btnGerar").addEventListener("click", () => { $("nSenha").value = gerarSenha(); });
   $("fNovo").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -240,15 +252,22 @@
     if (!m || !n) return aviso("msgNovo", "Informe a matrícula e o nome.");
     if (s.length < 8) return aviso("msgNovo", "A senha precisa ter pelo menos 8 caracteres.");
     try {
-      await RV.rpc("admin_criar_usuario", { p_matricula: m, p_nome: n, p_cargo: c || null, p_senha: s, p_admin: $("nAdmin").checked });
+      await RV.rpc("admin_criar_usuario", { p_matricula: m, p_nome: n, p_cargo: c || null, p_senha: s, p_admin: $("nAdmin").checked, p_acessos: NIVEIS[$("nNivel").value] });
       aviso("msgNovo", "Criado. Matrícula <b>" + esc(m) + "</b> · senha <span class='senha'>" + esc(s) + "</span> (anote, ela não fica visível depois).", "green", true);
-      $("nMat").value = $("nNome").value = $("nCargo").value = $("nSenha").value = ""; $("nAdmin").checked = false;
+      $("nMat").value = $("nNome").value = $("nCargo").value = $("nSenha").value = ""; $("nAdmin").checked = false; $("nNivel").value = "lobinho";
       await recarregarFunc();
     } catch (err) { aviso("msgNovo", err.message); }
   });
   $("listaFunc").addEventListener("click", async (e) => {
     const b = e.target.closest("button[data-a]"); if (!b) return;
     const m = b.dataset.m, p = perfis.find((x) => x.matricula === m);
+    if (b.dataset.a === "acesso") { editAc = m; return desenharLista(); }
+    if (b.dataset.a === "acCancelar") { editAc = null; return desenharLista(); }
+    if (b.dataset.a === "acSalvar") {
+      try { await RV.rpc("admin_definir_acessos", { p_matricula: m, p_acessos: NIVEIS[$("eNivel").value] }); editAc = null; await recarregarFunc(); aviso("msgFunc", "Acesso de " + p.nome + " atualizado: " + NOMES[nivelDe(perfis.find((x) => x.matricula === m))] + ".", "green"); }
+      catch (err) { aviso("msgFunc", err.message); }
+      return;
+    }
     if (b.dataset.a === "senha") {
       if (!confirm("Gerar uma nova senha para " + p.nome + "?")) return;
       const s = gerarSenha();
@@ -384,7 +403,7 @@
   }
   $("selVer").addEventListener("change", mostrarVer);
 
-  if (RV.logado()) abrir(); else login("");
+  if (RV.logado()) abrir(); else login();
 })();
 </script>
 </body>

@@ -109,3 +109,5 @@
 .fmsg{min-height:20px;margin:0;font-size:14px;color:var(--muted)}.fmsg.bad{color:#e03e3e}
 .fpick{cursor:pointer;text-align:center}
 .pess .av.ini{display:grid;font-size:16px;color:var(--muted)}
+
+.quem .qbt{display:flex;gap:6px;flex:none}

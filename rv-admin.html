@@ -184,6 +184,30 @@
   const textoAcessos = (lista) => lista.length ? ACESSOS.filter((x) => lista.includes(x)).map((x) => NOME_AC[x]).join(" + ") : "nenhum";
   let editAc = null;
 
+  // A senha nova aparece numa janela que só fecha quando o administrador toca em "Já anotei".
+  function mostrarSenha(nome, mat, senha) {
+    let m = document.getElementById("senhaMod");
+    if (!m) {
+      m = document.createElement("div"); m.id = "senhaMod"; m.className = "fmodal";
+      m.innerHTML = '<div class="fbox" role="dialog" aria-modal="true"><h2>🔑 Nova senha</h2><p id="smQuem" style="margin:0"></p>' +
+        '<div class="senha" id="smSenha" style="font-size:30px;font-weight:700;letter-spacing:1px;padding:14px;border:2px dashed var(--border);border-radius:12px;user-select:all;overflow-wrap:anywhere"></div>' +
+        '<p class="fmsg" id="smMsg">Anote ou copie agora: ela não fica salva em lugar nenhum.</p>' +
+        '<button class="btn primary full" id="smCopiar" type="button">📋 Copiar senha</button>' +
+        '<button class="btn full" id="smOk" type="button">Já anotei</button></div>';
+      document.body.appendChild(m);
+      m.querySelector("#smOk").addEventListener("click", () => m.classList.add("hidden"));
+      m.querySelector("#smCopiar").addEventListener("click", async () => {
+        const t = m.querySelector("#smSenha").textContent;
+        try { await navigator.clipboard.writeText(t); m.querySelector("#smMsg").textContent = "Senha copiada ✓"; }
+        catch (e) { m.querySelector("#smMsg").textContent = "Não consegui copiar: toque e segure na senha para copiar."; }
+      });
+    }
+    m.querySelector("#smQuem").innerHTML = "Para <b>" + esc(nome) + "</b> (matrícula " + esc(mat) + "):";
+    m.querySelector("#smSenha").textContent = senha;
+    m.querySelector("#smMsg").textContent = "Anote ou copie agora: ela não fica salva em lugar nenhum.";
+    m.classList.remove("hidden");
+  }
+
   // ---------- funcionários ----------
   async function recarregarFunc() {
     const [lista, fts] = await Promise.all([
@@ -283,7 +307,7 @@
     if (b.dataset.a === "senha") {
       if (!confirm("Gerar uma nova senha para " + p.nome + "?")) return;
       const s = gerarSenha();
-      try { await RV.rpc("admin_resetar_senha", { p_matricula: m, p_senha: s }); aviso("msgFunc", "Nova senha de <b>" + esc(p.nome) + "</b> (" + esc(m) + "): <span class='senha'>" + esc(s) + "</span>", "green", true); }
+      try { await RV.rpc("admin_resetar_senha", { p_matricula: m, p_senha: s }); mostrarSenha(p.nome, m, s); aviso("msgFunc", "Nova senha de <b>" + esc(p.nome) + "</b> (" + esc(m) + "): <span class='senha'>" + esc(s) + "</span>", "green", true); }
       catch (err) { aviso("msgFunc", err.message); }
     } else if (confirm("Excluir o login de " + p.nome + "? Os dados de RV dela continuam na planilha importada.")) {
       try { await RV.rpc("admin_excluir_usuario", { p_matricula: m }); await recarregarFunc(); aviso("msgFunc", "Login excluído.", "green"); }

@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="ocorr.css">
 <link rel="stylesheet" href="paginas.css">
 <link rel="stylesheet" href="rv.css">
-<script src="rv-config.js"></script><script src="rv.js"></script><script src="acesso.js" data-exigir="admin"></script>
+<script src="rv-config.js"></script><script src="rv.js"></script><script src="foto.js"></script><script src="acesso.js" data-exigir="admin"></script>
 </head>
 <body>
 <div class="wrap" style="max-width:860px">
@@ -141,7 +141,7 @@
     }
   }
 
-  let eu = null, cfg = null, perfis = [], colunas = [];
+  let eu = null, cfg = null, perfis = [], colunas = [], fotos = {};
 
   // ---------- entrada ----------
   async function abrir() {
@@ -186,7 +186,12 @@
 
   // ---------- funcionários ----------
   async function recarregarFunc() {
-    perfis = await RV.api("/rest/v1/perfis?select=*&order=matricula.asc");
+    const [lista, fts] = await Promise.all([
+      RV.api("/rest/v1/perfis?select=*&order=matricula.asc"),
+      RV.api("/rest/v1/fotos?select=matricula,imagem").catch(() => []) // tabela ainda não criada: segue sem fotos
+    ]);
+    perfis = lista;
+    fotos = {}; (fts || []).forEach((f) => { fotos[f.matricula] = f.imagem; });
     desenharLista();
     await atualizarFaltantes();
   }
@@ -201,7 +206,7 @@
         : ACESSOS.filter((k) => ac.includes(k)).map((k) => `<span class="tag ${TAG_AC[k]}" style="display:inline">${NOME_AC[k]}</span>`).join(" ") || '<span class="tag t-controle" style="display:inline">sem nenhum acesso</span>';
       const ed = editAc === p.matricula ? `<div style="flex-basis:100%;padding-top:8px"><div class="acs" id="eAcs">${ACESSOS.map((k) => `<label class="chk"><input type="checkbox" value="${k}" ${ac.includes(k) ? "checked" : ""}> ${ROTULO_AC[k]}</label>`).join("")}</div>
           <div class="row" style="margin:4px 0 0"><button class="btn mini primary" data-a="acSalvar" data-m="${esc(p.matricula)}">Salvar acessos</button><button class="btn mini" data-a="acCancelar">Cancelar</button></div></div>` : "";
-      return `<div class="li" style="flex-wrap:wrap"><div class="t"><b>${esc(p.nome)}</b> ${chips}<span>${esc(p.matricula)}${p.cargo ? " · " + esc(p.cargo) : ""}</span></div>
+      return `<div class="li" style="flex-wrap:wrap"><div class="t pess">${Foto.avatar(p.nome, fotos[p.matricula])}<div class="pi2"><b>${esc(p.nome)}</b> ${chips}<span>${esc(p.matricula)}${p.cargo ? " · " + esc(p.cargo) : ""}</span></div></div>
         ${p.admin ? "" : `<button class="btn mini" data-a="acesso" data-m="${esc(p.matricula)}">Acessos</button>`}
         <button class="btn mini" data-a="senha" data-m="${esc(p.matricula)}">Nova senha</button>
         ${p.matricula === eu.matricula ? "" : `<button class="btn mini danger" data-a="del" data-m="${esc(p.matricula)}">Excluir</button>`}${ed}</div>`;

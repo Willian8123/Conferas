@@ -14,7 +14,7 @@
   function gravarSessao(s) {
     mem = s;
     try { s ? localStorage.setItem(KEY, JSON.stringify(s)) : localStorage.removeItem(KEY); } catch (e) {}
-    if (!s) { try { localStorage.removeItem(PK); } catch (e) {} }
+    if (!s) { try { localStorage.removeItem(PK); localStorage.removeItem("rv_foto_v1"); } catch (e) {} }
   }
   // Cópia do perfil (nome, cargo, acessos) para abrir as telas mesmo sem internet.
   // Não guarda nenhum dado de RV.

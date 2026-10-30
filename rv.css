@@ -88,3 +88,24 @@
 #listaFunc .li{row-gap:8px}
 #listaFunc .li .t{flex:1 1 100%}
 #listaFunc .li .t .tag{margin:2px 4px 2px 0}
+
+/* ===== foto de perfil ===== */
+.av{width:40px;height:40px;border-radius:50%;object-fit:cover;flex:none;display:inline-block;vertical-align:middle;background:var(--bg-hover)}
+.av.ini{display:inline-grid;place-items:center;font-weight:700;font-size:15px;color:var(--muted);border:1px solid var(--border)}
+.av.grande{width:160px;height:160px;font-size:48px}
+.av.rvfoto{width:76px;height:76px;font-size:26px;border:2px solid var(--border)}
+.avbtn{position:relative;border:0;background:transparent;padding:0;cursor:pointer;border-radius:50%;-webkit-tap-highlight-color:transparent}
+.avbtn .cam{position:absolute;right:-4px;bottom:-4px;width:20px;height:20px;border-radius:50%;background:var(--bg);border:1px solid var(--border);display:grid;place-items:center;font-size:11px}
+.quem .qn{display:flex;align-items:center;gap:10px;min-width:0}
+.fotolink{border:0;background:transparent;color:var(--muted);font:inherit;font-size:13px;cursor:pointer;padding:2px 0;text-decoration:underline}
+.pess{display:flex;gap:12px;align-items:center}
+.pess .pi2{flex:1;min-width:0}
+.pess .av{width:48px;height:48px}
+.fmodal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:80}
+.fmodal.hidden{display:none}
+.fbox{background:var(--bg);width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;text-align:center}
+.fbox h2{margin:0;font-size:20px}
+.fprev{display:flex;justify-content:center;margin:6px 0}
+.fmsg{min-height:20px;margin:0;font-size:14px;color:var(--muted)}.fmsg.bad{color:#e03e3e}
+.fpick{cursor:pointer;text-align:center}
+.pess .av.ini{display:grid;font-size:16px;color:var(--muted)}

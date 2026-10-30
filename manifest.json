@@ -1,7 +1,7 @@
 {
-  "name": "Rotinas do Conferente",
-  "short_name": "Rotinas",
-  "description": "Guia de rotinas, procedimentos e chamados do conferente.",
+  "name": "Embu Excelente",
+  "short_name": "Embu Excelente",
+  "description": "Rotinas, produtos, recontagem, ocorrências e RV do CDD Embu.",
   "lang": "pt-BR",
   "start_url": "./index.html",
   "scope": "./",

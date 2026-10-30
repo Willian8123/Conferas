@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="ocorr.css">
 <link rel="stylesheet" href="paginas.css">
 <link rel="stylesheet" href="rv.css">
-<script src="rv-config.js"></script><script src="rv.js"></script><script src="acesso.js" data-exigir="lobinho"></script>
+<script src="rv-config.js"></script><script src="rv.js"></script><script src="foto.js"></script><script src="acesso.js" data-exigir="lobinho"></script>
 </head>
 <body>
 <div class="wrap">
@@ -20,6 +20,7 @@
   <div class="lobo"><span class="lobo-i" id="loboIco"><img src="lobinho.png" alt="Lobinho" class="rvlogo" onerror="this.parentNode.textContent='🐺'"></span></div>
   <h1 id="ola">Lobinho</h1>
   <p class="sub" id="quem">Minha RV</p>
+  <p style="margin:-6px 0 8px"><button class="fotolink" id="bFotoLink" type="button">📷 Colocar minha foto</button></p>
   <div id="painel"></div>
 
   <div class="sec">Conta</div>
@@ -40,6 +41,20 @@
   const $ = (id) => document.getElementById(id);
   const aviso = (box, txt, cor) => { $(box).className = "callout " + (cor || "red"); $(box + "Txt").textContent = txt; };
 
+  // a foto da pessoa ocupa o lugar do lobo; sem foto, o lobo continua
+  function pintarFoto(perfil) {
+    const img = Foto.minha(), lobo = document.querySelector(".lobo");
+    if (!lobo) return;
+    if (img) {
+      lobo.innerHTML = '<button class="avbtn" id="bFotoRv" type="button" aria-label="Trocar minha foto">' + Foto.avatar(perfil.nome, img, "rvfoto") + '</button>';
+      $("bFotoRv").onclick = () => Foto.abrir(() => pintarFoto(perfil));
+    } else if (!lobo.querySelector(".rvlogo")) {
+      lobo.innerHTML = '<span class="lobo-i" id="loboIco"><img src="lobinho.png" alt="Lobinho" class="rvlogo" onerror="this.parentNode.textContent=\'🐺\'"></span>';
+    }
+    $("bFotoLink").style.display = img ? "none" : "";
+    $("bFotoLink").onclick = () => Foto.abrir(() => pintarFoto(perfil));
+  }
+
   async function abrir() {
     if (!$("painel")) return;
     $("painel").innerHTML = '<p class="rvsmall" style="text-align:center;margin:30px 0">Carregando…</p>';
@@ -52,6 +67,8 @@
       $("ola").textContent = "Olá, " + (perfil.nome || "").trim().split(/\s+/)[0] + " 👋";
       $("quem").textContent = ["Lobinho · Minha RV", perfil.cargo, "Matrícula " + perfil.matricula].filter(Boolean).join(" · ");
       $("lnkAdmin").classList.toggle("hidden", !perfil.admin);
+      pintarFoto(perfil);
+      Foto.sincronizar().then(() => pintarFoto(perfil)).catch(() => {});
       if (!cfg) $("painel").innerHTML = '<div class="callout yellow"><p>O painel ainda não foi configurado pelo administrador.</p></div>';
       else RV.painel($("painel"), perfil, linhas, cfg, {});
     } catch (e) {

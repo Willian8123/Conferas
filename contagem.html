@@ -448,13 +448,15 @@ function campoHtml(it, t) {
     <button class="plus" type="button" data-t="${t}" aria-label="Somar mais um valor">＋</button>
     <span class="eq">= <b>${ruim ? "—" : fmt(v)}</b></span></div></div>`;
 }
+const ABREV = { pallet: "pal", lastro: "las", cx: "cx", un: "un" };
 function resumoItem(it) {
   const partes = ORDEM.filter((t) => { const v = valorTipo(it, t); return v != null && !isNaN(v); })
-    .map((t) => ROT[t] + " <b>" + fmt(valorTipo(it, t)) + "</b>");
-  return partes.length ? partes.join(" · ") : "Sem quantidade ainda";
+    .map((t) => "<b>" + fmt(valorTipo(it, t)) + "</b> " + ABREV[t]);
+  return partes.length ? partes.join(" · ") : "sem quantidade";
 }
 // Cartões recolhíveis: o nome e o resumo ficam sempre à vista; os campos aparecem ao tocar.
 const abertos = new Set();
+let fq = "";
 function statusItem(it) {
   if (temInvalido(it)) return ["bad", "!"];
   if (temValido(it)) return ["ok", "✓"];
@@ -462,10 +464,10 @@ function statusItem(it) {
 }
 function cartaoHtml(it, i) {
   const aberto = abertos.has(it.cod), [sc, si] = statusItem(it);
-  return `<div class="pc ${aberto ? "open" : ""}" data-i="${i}">
+  return `<div class="pc ${aberto ? "open" : ""}" data-i="${i}" data-busca="${esc(norm((it.nome || "") + " " + (codExib(it) || "")))}">
     <button class="ph" type="button" data-a="toggle" aria-expanded="${aberto}">
       <span class="st ${sc}" aria-hidden="true">${si}</span>
-      <span class="t"><b>${esc(it.nome)}</b>${codExib(it) ? `<span class="code">${esc(codExib(it))}</span>` : ""}<span class="resu">${resumoItem(it)}</span></span>
+      <span class="t"><b>${esc(it.nome)}</b><span class="l2">${codExib(it) ? `<span class="code">${esc(codExib(it))}</span>` : ""}<span class="resu">${resumoItem(it)}</span></span></span>
       <span class="chev" aria-hidden="true">▾</span>
     </button>
     <div class="pb">${ORDEM.map((t) => campoHtml(it, t)).join("")}
@@ -491,9 +493,21 @@ function vContar() {
   let h = `<div class="ico">🧮</div><h1>Quantidades</h1>
     <p class="sub">Toque no produto para abrir e digitar <b>pallets</b>, <b>lastros</b>, <b>caixas</b> soltas e <b>unidades</b>. Para somar vários valores, use o <b>+</b>: <b>15+20+12</b>.</p>
     <div class="row"><a class="btn" href="#/buscar">➕ Adicionar produto</a></div>`;
+  if (n >= 4) h += `<div class="fbar"><input id="fq" class="search" type="search" inputmode="search" autocomplete="off" placeholder="Pesquisar nos ${n} produtos…" value="${esc(fq)}"><div class="fmeta" id="fmeta"></div></div>`;
   h += n ? atual.itens.map(cartaoHtml).join("") : '<div class="empty">Nenhum produto marcado. Toque em “Adicionar produto”.</div>';
   view.innerHTML = h;
+  aplicarFiltro();
   atualizarBarraContar();
+}
+function aplicarFiltro() {
+  const termos = norm(fq).split(/\s+/).filter(Boolean);
+  let vis = 0;
+  document.querySelectorAll(".pc").forEach((c) => {
+    const ok = termos.every((x) => (c.dataset.busca || "").includes(x));
+    c.classList.toggle("oculto", !ok); if (ok) vis++;
+  });
+  const m = document.getElementById("fmeta");
+  if (m) m.textContent = termos.length ? (vis ? vis + " encontrado(s)" : "Nenhum produto com esse termo") : "";
 }
 function atualizarBarraContar() {
   const n = atual.itens.length;
@@ -550,6 +564,7 @@ function vEnviar() {
 /* ================= eventos ================= */
 view.addEventListener("input", (e) => {
   const t = e.target;
+  if (t.id === "fq") { fq = t.value; aplicarFiltro(); return; }
   if (t.id === "bq") { bq = t.value; bshow = 60; atualizarBusca(); return; }
   if (t.id === "st") { atual.setor = t.value; salvarAtual(); return; }
   if (t.classList.contains("qi")) {
@@ -600,7 +615,7 @@ view.addEventListener("click", async (e) => {
       const it = atual.itens[i];
       if (temDigitado(it) && !confirm("Remover " + it.nome + " e as quantidades lançadas?")) return;
       abertos.delete(it.cod); atual.itens.splice(i, 1); salvarAtual(); vContar();
-    } else if (a === "nova") {
+    } else if (a === "nova") { fq = "";
       atual = { id: novoId(), inicio: new Date().toISOString(), itens: [], setor: "", contador: nomeLogin() };
       salvarAtual(); bq = ""; bmodo = "todos"; ir("/buscar");
     } else if (a === "continuar") ir("/contar");

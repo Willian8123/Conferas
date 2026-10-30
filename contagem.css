@@ -104,3 +104,21 @@
 .pc .st.ok{background:var(--green);color:var(--green-t);border-color:transparent;font-weight:700}
 .pc .st.bad{background:var(--red);color:var(--red-t);border-color:transparent;font-weight:700}
 .pc{margin:8px 0}
+
+/* ===== cartões compactos + pesquisa dentro das quantidades ===== */
+.pc{margin:6px 0}
+.pc .ph{padding:8px 10px;gap:10px}
+.pc .ph .t > b{font-size:15px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pc.open .ph .t > b{-webkit-line-clamp:unset;overflow:visible}
+.pc .ph .l2{display:flex;gap:8px;align-items:center;margin-top:3px;min-width:0}
+.pc .ph .l2 .code{margin:0;flex:none}
+.pc .ph .resu{margin:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.pc.open .ph .resu{display:none}
+.pc .st{width:24px;height:24px;font-size:12px}
+.pc .chev{font-size:18px}
+.pc.oculto{display:none}
+.fbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0 4px;margin-top:4px}
+.fbar .search{width:100%}
+.fbar .fmeta{font-size:13px;color:var(--muted);min-height:16px;padding:2px 2px 0}
+
+.pc .ph .resu b{display:inline;font-size:inherit;-webkit-line-clamp:unset}

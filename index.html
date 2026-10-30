@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="ocorr.css">
 <link rel="stylesheet" href="paginas.css">
 <link rel="stylesheet" href="rv.css">
+<link rel="stylesheet" href="feed.css">
 </head>
 <body>
 <div class="wrap">
@@ -27,6 +28,11 @@
   <div class="quem" id="quem"></div>
 
   <div class="portas">
+    <a class="porta" href="feed.html" id="portaFeed">
+      <span class="pi">📣</span>
+      <div><b>Feed <span class="dotnovo hidden" id="feedNovo"></span></b><span>Avisos, enquetes e novidades do CDD</span></div>
+      <span class="go">›</span>
+    </a>
     <a class="porta" href="conferente.html" data-perm="conferente">
       <span class="pi">📋</span>
       <div><b>Conferente</b><span>Rotinas, produtos, recontagem e checklist</span></div>
@@ -76,11 +82,19 @@
       a.style.display = p && !liberada ? "none" : "";
       a.setAttribute("href", p ? a.dataset.dest : "entrar.html?volta=" + encodeURIComponent(a.dataset.dest));
     });
-    $("semNada").classList.toggle("hidden", !(p && portas.every((a) => a.style.display === "none")));
+    $("semNada").classList.toggle("hidden", !(p && portas.filter((a) => a.id !== "portaFeed").every((a) => a.style.display === "none")));
     $("admLink").style.display = p && p.admin ? "block" : "none";
   }
   desenhar();
   // atualiza o perfil em segundo plano (os acessos podem ter mudado)
+  // bolinha de "novos" no Feed (pergunta só um número ao servidor)
+  function feedNovidades() {
+    if (!RV.logado()) { $("feedNovo").classList.add("hidden"); return; }
+    RV.rpc("feed_novidades", { p_desde: +(localStorage.getItem("feed_visto_v1") || 0) }).then((r) => {
+      const n = r && r.qtd || 0; $("feedNovo").textContent = n > 9 ? "9+" : n; $("feedNovo").classList.toggle("hidden", !n);
+    }).catch(() => {});
+  }
+  feedNovidades();
   if (RV.logado()) RV.meuPerfil().then(desenhar).then(() => Foto.sincronizar()).then(desenhar).catch((e) => {
     if (e.status === 400 || e.status === 401 || e.status === 403) RV.sair().then(desenhar);
   });

@@ -3,49 +3,71 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#37352f">
+<meta name="theme-color" content="#0a2a6b">
 <meta name="robots" content="noindex">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Embu Excelente">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
-<title>Entrar</title>
-<link rel="stylesheet" href="ocorr.css">
-<link rel="stylesheet" href="paginas.css">
-<link rel="stylesheet" href="rv.css">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Embu Excelente · Entrar</title>
+<link rel="stylesheet" href="login.css">
 </head>
-<body>
-<div class="wrap">
-  <a class="back" href="index.html">← Início</a>
-  <div class="ico">🔐</div>
-  <h1>Entrar</h1>
-  <p class="sub">Use a sua matrícula e a senha que o administrador te passou.</p>
-  <form id="fLogin" class="rvlogin" novalidate>
-    <div class="field"><label for="mat">Matrícula</label><input id="mat" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
-    <div class="field"><label for="sen">Senha</label><input id="sen" type="password" autocomplete="current-password"></div>
-    <div class="callout red hidden" id="erro"><p id="erroTxt"></p></div>
-    <div class="row"><button class="btn primary big" id="btnEntrar" type="submit">Entrar</button></div>
-    <p class="rvsmall">Esqueceu a senha? Peça uma nova ao administrador.</p>
+<body class="login">
+<div class="lwrap">
+  <div class="lhero"><img src="logo-cddembu.png" alt="CDD Embu" width="250" height="250" onerror="this.style.display='none'"></div>
+  <form class="lcard" id="fLogin" novalidate>
+    <h1>Embu Excelente</h1>
+    <p class="lsub">Plataforma de operações</p>
+
+    <label for="cdd">Selecione seu CDD</label>
+    <div class="lcampo ic"><span class="li-ico" aria-hidden="true">🏭</span>
+      <select id="cdd"><option value="embu">CDD Embu</option></select><span class="chev" aria-hidden="true">▾</span></div>
+
+    <label for="mat">Matrícula</label>
+    <div class="lcampo ic"><span class="li-ico" aria-hidden="true">👤</span>
+      <input id="mat" placeholder="Digite sua matrícula" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text"></div>
+
+    <label for="sen">Senha</label>
+    <div class="lcampo ic"><span class="li-ico" aria-hidden="true">🔒</span>
+      <input id="sen" type="password" placeholder="Digite sua senha" autocomplete="current-password">
+      <button class="olho" id="olho" type="button" aria-label="Mostrar a senha">👁️</button></div>
+
+    <div class="lerro hidden" id="erro" role="alert"></div>
+    <button class="lbtn" id="btnEntrar" type="submit">ENTRAR</button>
+    <p class="lrodape">Acesso restrito aos usuários cadastrados.<br>Esqueceu a senha? Peça uma nova ao administrador.</p>
   </form>
+  <p class="lfora">Ambev · Operações de CDD</p>
 </div>
 <script src="rv-config.js"></script>
 <script src="rv.js"></script>
-<script src="util.js"></script>
 <script>
   const $ = (id) => document.getElementById(id);
   // só aceita voltar para uma página do próprio app (ex.: contagem.html)
   const volta = (() => { const v = new URLSearchParams(location.search).get("volta") || ""; return /^[a-z0-9-]+\.html$/i.test(v) ? v : "index.html"; })();
   if (RV.logado() && RV.perfilCache()) location.replace(volta);
+  // lembra o CDD escolhido (por enquanto só existe o Embu)
+  try { const c = localStorage.getItem("cdd_v1"); if (c && Array.from($("cdd").options).some((o) => o.value === c)) $("cdd").value = c; } catch (e) {}
+  $("cdd").addEventListener("change", () => { try { localStorage.setItem("cdd_v1", $("cdd").value); } catch (e) {} });
+  $("olho").addEventListener("click", () => {
+    const v = $("sen").type === "password"; $("sen").type = v ? "text" : "password";
+    $("olho").setAttribute("aria-label", v ? "Esconder a senha" : "Mostrar a senha");
+  });
   $("fLogin").addEventListener("submit", async (e) => {
     e.preventDefault();
     const m = $("mat").value.trim(), s = $("sen").value;
-    const erro = (t) => { $("erroTxt").textContent = t; $("erro").classList.remove("hidden"); };
+    const erro = (t) => { $("erro").textContent = t; $("erro").classList.remove("hidden"); };
+    $("erro").classList.add("hidden");
     if (!m || !s) return erro("Preencha a matrícula e a senha.");
-    $("btnEntrar").disabled = true; $("btnEntrar").textContent = "Entrando…";
+    $("btnEntrar").disabled = true; $("btnEntrar").textContent = "ENTRANDO…";
     try {
       await RV.entrar(m, s);
       const p = await RV.meuPerfil();
       if (!p) { await RV.sair(); throw new Error("Este login não tem acesso. Fale com o administrador."); }
+      try { localStorage.setItem("cdd_v1", $("cdd").value); } catch (e2) {}
       location.replace(volta);
-    } catch (err) { erro(err.message); $("btnEntrar").disabled = false; $("btnEntrar").textContent = "Entrar"; $("sen").value = ""; }
+    } catch (err) { erro(err.message); $("btnEntrar").disabled = false; $("btnEntrar").textContent = "ENTRAR"; $("sen").value = ""; }
   });
 </script>
 </body>

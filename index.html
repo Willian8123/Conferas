@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
+<script>try{if(!localStorage.getItem("rv_sessao_v1"))location.replace("entrar.html")}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#37352f">
 <meta name="mobile-web-app-capable" content="yes">
@@ -75,9 +76,10 @@
       $("quem").innerHTML = '<span class="qn"><button class="avbtn" id="bFoto" type="button" aria-label="Minha foto">' + Foto.avatar(p.nome, img) + (img ? "" : '<span class="cam" aria-hidden="true">📷</span>') + '</button><span>Olá, <b>' + esc(p.nome.trim().split(/\s+/)[0]) + '</b></span></span><span class="qbt"><button class="btn mini" id="bSenha" type="button">🔑 Senha</button> <button class="btn mini" id="bSair" type="button">Sair</button></span>';
       $("bSenha").addEventListener("click", () => Conta.abrirSenha());
       $("bFoto").addEventListener("click", () => Foto.abrir(desenhar));
-      $("bSair").addEventListener("click", async () => { await RV.sair(); desenhar(); });
+      $("bSair").addEventListener("click", async () => { await RV.sair(); location.replace("entrar.html"); });
     } else {
-      $("quem").innerHTML = '<span>Entre com a sua matrícula para abrir as opções.</span><a class="btn mini primary" href="entrar.html">Entrar</a>';
+      if (!RV.logado()) { location.replace("entrar.html"); return; }
+      $("quem").innerHTML = '<span>Carregando…</span>';
     }
     portas.forEach((a) => {
       const liberada = !!p && pode(p, a.getAttribute("data-perm"));

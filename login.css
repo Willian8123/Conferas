@@ -1,0 +1,37 @@
+/* Primeira tela: escolher o CDD e entrar. Cores do Lobinho. */
+*{box-sizing:border-box}
+body.login{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Inter,Helvetica,Arial,sans-serif;min-height:100vh;min-height:100dvh;color:#12213a;
+  background:radial-gradient(90% 60% at 50% 0%,#2f7bff 0%,rgba(47,123,255,0) 60%),linear-gradient(180deg,#0a2a6b 0%,#0a3fa8 55%,#0b2e78 100%);
+  background-attachment:fixed}
+body.login .lwrap{max-width:440px;margin:0 auto;padding:max(28px,env(safe-area-inset-top)) 18px max(28px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center}
+.lhero{position:relative;display:flex;justify-content:center;margin-bottom:-58px;z-index:2}
+.lhero::before{content:"";position:absolute;inset:8% 14% 0;border-radius:50%;background:radial-gradient(circle,rgba(90,160,255,.75) 0%,rgba(90,160,255,0) 68%);filter:blur(10px)}
+.lhero img{position:relative;width:min(250px,64vw);height:auto;display:block;filter:drop-shadow(0 14px 22px rgba(0,0,0,.55));animation:lflutua 5s ease-in-out infinite}
+@keyframes lflutua{50%{transform:translateY(-5px)}}
+.lcard{position:relative;width:100%;background:#fff;border-radius:24px;padding:72px 20px 20px;box-shadow:0 24px 60px rgba(0,10,40,.5)}
+.lcard h1{margin:0;text-align:center;font-size:30px;letter-spacing:.2px;color:#0a2a6b}
+.lcard .lsub{margin:4px 0 18px;text-align:center;font-size:12px;font-weight:700;letter-spacing:2.2px;color:#5b6b8c;text-transform:uppercase}
+.lcard label{display:block;margin:12px 0 6px;font-size:14px;font-weight:700;color:#0a2a6b}
+.lcampo{position:relative;display:flex;align-items:center}
+.lcampo .li-ico{position:absolute;left:14px;font-size:18px;pointer-events:none;opacity:.8}
+.lcampo input,.lcampo select{width:100%;box-sizing:border-box;border:1.5px solid #d5def0;border-radius:14px;background:#f6f9ff;color:#12213a;font:inherit;font-size:16px;padding:15px 14px;-webkit-appearance:none;appearance:none}
+.lcampo.ic input,.lcampo.ic select{padding-left:44px}
+.lcampo select{font-weight:700;padding-right:42px;cursor:pointer}
+.lcampo .chev{position:absolute;right:16px;pointer-events:none;color:#5b6b8c;font-size:14px}
+.lcampo input:focus,.lcampo select:focus{outline:none;border-color:#1f6bff;box-shadow:0 0 0 3px rgba(31,107,255,.2);background:#fff}
+.lcampo .olho{position:absolute;right:6px;border:0;background:transparent;font-size:18px;padding:10px;cursor:pointer;opacity:.7}
+.lerro{margin:12px 0 0;padding:10px 12px;border-radius:10px;background:#fdebec;color:#8b1c1c;font-size:14px}
+.lerro.hidden{display:none}
+.lbtn{width:100%;margin-top:18px;border:0;border-radius:14px;padding:16px;font:inherit;font-size:17px;font-weight:800;letter-spacing:1.5px;color:#fff;cursor:pointer;
+  background:linear-gradient(135deg,#0a3fa8,#1f6bff);box-shadow:0 8px 20px rgba(31,107,255,.45)}
+.lbtn:active{transform:translateY(1px)}
+.lbtn:disabled{opacity:.65}
+.lrodape{margin:14px 0 0;text-align:center;font-size:13px;color:#5b6b8c}
+.lfora{margin:16px 0 0;text-align:center;font-size:12px;color:#b9cdf5}
+@media (prefers-color-scheme:dark){
+  .lcard{background:#101a30;box-shadow:0 24px 60px rgba(0,0,0,.6)}
+  .lcard h1,.lcard label{color:#e8f0ff}.lcard .lsub,.lrodape{color:#9db3dc}
+  .lcampo input,.lcampo select{background:#16233f;border-color:#27406e;color:#e8f0ff}
+  .lcampo input:focus,.lcampo select:focus{background:#1a2b4d}
+  .lerro{background:#4a1d20;color:#ffc9cc}
+}

@@ -49,6 +49,7 @@
             <label class="chk"><input type="checkbox" value="lobinho" checked> 🐺 Lobinho (ver a própria RV)</label>
             <label class="chk"><input type="checkbox" value="conferente"> 📋 Conferente</label>
             <label class="chk"><input type="checkbox" value="ocorrencias"> 📨 Ocorrências</label>
+            <label class="chk"><input type="checkbox" value="controle"> 🎯 Controle (envia recontagem)</label>
           </div>
           <span class="hint">Ao digitar o cargo, eu sugiro: Conferente → Conferente + Ocorrências · Empilhadeira → Ocorrências + Lobinho · Armazém → Lobinho. Você pode mudar.</span></div>
         <label class="chk"><input type="checkbox" id="nAdmin"> Também é administrador</label>
@@ -58,7 +59,7 @@
 
       <div class="sec">Cadastrados <small id="totFunc"></small></div>
       <div class="field" style="margin-bottom:8px"><label for="fFiltro">Mostrar</label>
-        <select id="fFiltro"><option value="">Todos</option><option value="lobinho">Com Lobinho</option><option value="conferente">Com Conferente</option><option value="ocorrencias">Com Ocorrências</option><option value="nenhum">Sem nenhum acesso</option><option value="admin">Administradores</option></select></div>
+        <select id="fFiltro"><option value="">Todos</option><option value="lobinho">Com Lobinho</option><option value="conferente">Com Conferente</option><option value="ocorrencias">Com Ocorrências</option><option value="controle">Com Controle</option><option value="nenhum">Sem nenhum acesso</option><option value="admin">Administradores</option></select></div>
       <div class="list" id="listaFunc"></div>
       <div class="callout hidden" id="msgFunc"><p id="msgFuncTxt"></p></div>
     </div>
@@ -174,11 +175,11 @@
   });
 
   // ---------- acessos (qualquer combinação) ----------
-  const ACESSOS = ["lobinho", "conferente", "ocorrencias"];
-  const NOME_AC = { lobinho: "Lobinho", conferente: "Conferente", ocorrencias: "Ocorrências" };
-  const ROTULO_AC = { lobinho: "🐺 Lobinho (ver a própria RV)", conferente: "📋 Conferente", ocorrencias: "📨 Ocorrências" };
-  const TAG_AC = { lobinho: "t-retorno", conferente: "t-carreg", ocorrencias: "t-puxada" };
-  const acessosPorCargo = (c) => /conferente/i.test(c || "") ? ["conferente", "ocorrencias"] : /empilhadeira/i.test(c || "") ? ["ocorrencias", "lobinho"] : ["lobinho"];
+  const ACESSOS = ["lobinho", "conferente", "ocorrencias", "controle"];
+  const NOME_AC = { lobinho: "Lobinho", conferente: "Conferente", ocorrencias: "Ocorrências", controle: "Controle" };
+  const ROTULO_AC = { lobinho: "🐺 Lobinho (ver a própria RV)", conferente: "📋 Conferente", ocorrencias: "📨 Ocorrências", controle: "🎯 Controle (envia recontagem)" };
+  const TAG_AC = { lobinho: "t-retorno", conferente: "t-carreg", ocorrencias: "t-puxada", controle: "t-controle" };
+  const acessosPorCargo = (c) => /controle/i.test(c || "") ? ["controle", "ocorrencias", "lobinho"] : /conferente/i.test(c || "") ? ["conferente", "ocorrencias"] : /empilhadeira/i.test(c || "") ? ["ocorrencias", "lobinho"] : ["lobinho"];
   const marcados = (id) => Array.from($(id).querySelectorAll("input[type=checkbox]")).filter((c) => c.checked).map((c) => c.value);
   const marcar = (id, lista) => $(id).querySelectorAll("input[type=checkbox]").forEach((c) => { c.checked = lista.includes(c.value); });
   const textoAcessos = (lista) => lista.length ? ACESSOS.filter((x) => lista.includes(x)).map((x) => NOME_AC[x]).join(" + ") : "nenhum";

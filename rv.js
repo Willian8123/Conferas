@@ -100,6 +100,9 @@
   async function sair() {
     const s = lerSessao();
     gravarSessao(null);
+    // este aparelho deixa de receber os avisos desta pessoa
+    let ep = null; try { ep = localStorage.getItem("push_ep_v1"); localStorage.removeItem("push_ep_v1"); } catch (e) {}
+    if (s && ep) { try { await chamar("/rest/v1/rpc/push_remover", { method: "POST", token: s.access_token, body: { p_endpoint: ep } }); } catch (e) {} }
     if (s) { try { await chamar("/auth/v1/logout", { method: "POST", token: s.access_token }); } catch (e) {} }
   }
   const logado = () => !!lerSessao();
@@ -125,6 +128,7 @@
     return api(q);
   }
   const rpc = (nome, args) => api("/rest/v1/rpc/" + nome, { method: "POST", body: args });
+  const funcao = (nome, corpo) => api("/functions/v1/" + nome, { method: "POST", body: corpo || {} });
 
   // ---------- formatação ----------
   const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -216,6 +220,6 @@
     return primeiro;
   }
 
-  window.RV = { entrar, sair, logado, userId, perfilCache, guardarPerfil, trocarSenha, meuPerfil, config, dadosDe, rpc, api, emailDe, painel,
+  window.RV = { entrar, sair, logado, userId, perfilCache, guardarPerfil, trocarSenha, meuPerfil, config, dadosDe, rpc, funcao, api, emailDe, painel,
     esc, moeda, numero, num, mesLongo, mesCurto, dataHora };
 })();

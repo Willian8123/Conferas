@@ -36,7 +36,12 @@
     </a>
     <a class="porta" href="conferente.html" data-perm="conferente">
       <span class="pi">📋</span>
-      <div><b>Conferente</b><span>Rotinas, produtos, recontagem e checklist</span></div>
+      <div><b>Conferente <span class="dotnovo hidden" data-rec-badge></span></b><span>Rotinas, produtos, recontagem e checklist</span></div>
+      <span class="go">›</span>
+    </a>
+    <a class="porta" href="recontrole.html" data-perm="controle">
+      <span class="pi">🎯</span>
+      <div><b>Controle</b><span>Enviar recontagem para os conferentes</span></div>
       <span class="go">›</span>
     </a>
     <a class="porta" href="rv.html" data-perm="lobinho">
@@ -50,6 +55,7 @@
       <span class="go">›</span>
     </a>
   </div>
+  <div id="avisoCard"></div>
   <div class="callout yellow hidden" id="semNada"><span class="ci">ℹ️</span><p>O seu login ainda não tem acesso a nenhuma área. Peça ao administrador para liberar.</p></div>
   <p class="rvsmall" id="admLink" style="display:none;margin-top:18px"><a href="rv-admin.html">🛠️ Painel do administrador</a></p>
 </div>
@@ -58,6 +64,7 @@
 <script src="foto.js"></script>
 <script src="conta.js"></script>
 <script src="util.js"></script>
+<script src="aviso.js"></script>
 <script>
 (function () {
   const $ = (id) => document.getElementById(id);
@@ -88,6 +95,7 @@
     });
     $("semNada").classList.toggle("hidden", !(p && portas.filter((a) => a.id !== "portaFeed").every((a) => a.style.display === "none")));
     $("admLink").style.display = p && p.admin ? "block" : "none";
+    if (window.Aviso && p) Aviso.cartao($("avisoCard"));
   }
   desenhar();
   // atualiza o perfil em segundo plano (os acessos podem ter mudado)

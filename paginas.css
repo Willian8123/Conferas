@@ -63,3 +63,6 @@ details .body{padding:4px 14px 12px 36px}
 .mbox{background:var(--bg);width:100%;max-width:560px;border-radius:16px 16px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto}
 .mbox h2{margin:0 0 12px;font-size:20px}
 @media (min-width:640px){.modal{align-items:center}.mbox{border-radius:16px}}
+
+.dotnovo{display:inline-block;min-width:20px;height:20px;line-height:20px;padding:0 6px;border-radius:999px;background:#d93025;color:#fff;font-size:12px;font-weight:700;text-align:center;margin-left:8px;vertical-align:middle}
+[data-rec-badge].dotnovo{background:#d93025}

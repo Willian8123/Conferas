@@ -1,6 +1,6 @@
 // Service worker: deixa o app funcionar offline.
 // Ao alterar qualquer arquivo, aumente a versão abaixo para o celular atualizar.
-const VERSION = "rotinas-v23";
+const VERSION = "rotinas-v24";
 const FILES = [
   "./",
   "./index.html",
@@ -38,6 +38,7 @@ const FILES = [
   "./rv-config.js",
   "./rv-planilha.js",
   "./icon-192.png", "./apple-touch-icon.png", "./foto.js", "./conta.js", "./login.css", "./feed.html", "./feed.js", "./feed.css",
+  "./recontrole.html", "./recparser.js", "./aviso.js",
   "./icon-512.png",
   "./icon-maskable-512.png"
 ];
@@ -70,4 +71,29 @@ self.addEventListener("fetch", (e) => {
       })
       .catch(() => caches.match(e.request).then((r) => r || caches.match("./index.html")))
   );
+});
+
+// ---- Avisos (push) ----
+self.addEventListener("push", (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (er) { d = { corpo: e.data ? e.data.text() : "" }; }
+  const titulo = d.titulo || "Embu Excelente";
+  e.waitUntil(self.registration.showNotification(titulo, {
+    body: d.corpo || "Você tem uma nova recontagem.",
+    icon: "./icon-192.png",
+    badge: "./icon-192.png",
+    tag: d.tag || "recontagem",
+    renotify: true,
+    vibrate: [250, 120, 250],
+    requireInteraction: true,
+    data: { url: d.url || "./contagem.html" }
+  }));
+});
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const alvo = new URL((e.notification.data && e.notification.data.url) || "./contagem.html", self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((cs) => {
+    for (const c of cs) { if ("focus" in c) { c.navigate(alvo).catch(() => {}); return c.focus(); } }
+    return self.clients.openWindow(alvo);
+  }));
 });

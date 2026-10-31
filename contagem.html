@@ -361,7 +361,7 @@ function ir(p) { location.hash = "#" + p; }
 
 /* ================= tela: início ================= */
 function vInicio() {
-  let h = '<div class="ico">🧮</div><h1>Recontagem</h1><p class="sub">Marque os produtos, lance pallets, lastros e caixas e envie o PDF para o grupo.</p>';
+  let h = '<div class="ico">🧮</div><h1>Recontagem</h1><p class="sub">Marque os produtos, lance pallets, lastros e caixas e envie o PDF para o grupo.</p><div id="ctrlBox"></div>';
   if (atual && atual.itens.length) {
     h += `<div class="callout blue"><p><b>Recontagem em andamento</b><br>${atual.itens.length} ${plural(atual.itens.length, "produto", "produtos")} · iniciada em ${dataBR(atual.inicio)}</p></div>
       <div class="row"><button class="btn primary" data-a="continuar">Continuar recontagem</button><button class="btn danger" data-a="descartar">Descartar</button></div>`;
@@ -379,6 +379,43 @@ function vInicio() {
     <div class="callout"><p>O histórico fica só neste aparelho: reinstalar o app ou limpar os dados do navegador apaga tudo. Faça um backup de vez em quando.</p></div>
     <div class="row"><button class="btn" data-a="exp">⬇️ Exportar backup</button><button class="btn" data-a="impBtn">⬆️ Importar backup</button><input type="file" id="imp" accept=".json,application/json" class="hidden"></div>`;
   view.innerHTML = h;
+  carregarCtrl();
+}
+
+/* ---- listas enviadas pelo Controle ---- */
+async function carregarCtrl() {
+  const box = $("#ctrlBox");
+  if (!box || !window.RV || !RV.logado()) return;
+  let lista;
+  try { lista = await RV.rpc("rec_minhas"); } catch (e) { return; }
+  const box2 = $("#ctrlBox");
+  if (!box2 || !Array.isArray(lista) || !lista.length) return;
+  box2.innerHTML = lista.map((e) => {
+    const n = (e.itens || []).length;
+    return `<div class="callout blue"><span class="ci">📥</span><p><b>Recontagem do Controle</b><br>${n} ${plural(n, "produto", "produtos")}${e.de ? " · enviada por " + esc(e.de) : ""}${e.criado_em ? " · " + dataBR(e.criado_em) : ""}</p></div>
+      <div class="row"><button class="btn primary big" data-a="ctrl" data-e="${e.id}">📥 Carregar na recontagem</button></div>`;
+  }).join("");
+  ctrlLista = lista;
+}
+let ctrlLista = [];
+async function carregarDoControle(id) {
+  const env = ctrlLista.find((x) => String(x.id) === String(id));
+  if (!env) return;
+  if (!atual) atual = { id: novoId(), inicio: new Date().toISOString(), itens: [], setor: "", contador: nomeLogin() };
+  const tem = new Set(atual.itens.map((i) => (i.custom ? i.codUser : i.cod)));
+  let novos = 0;
+  (env.itens || []).forEach((x) => {
+    const cod = String(x.codigo);
+    if (tem.has(cod)) return;
+    tem.add(cod);
+    if (x.custom || !NOME.has(cod)) atual.itens.push({ cod: "X" + novoId(), nome: x.nome, custom: true, codUser: cod, q: qVazio() });
+    else atual.itens.push({ cod, nome: NOME.get(cod), q: qVazio() });
+    novos++;
+  });
+  salvarAtual();
+  try { await RV.rpc("rec_carregar", { p_envio: +env.id }); } catch (e) { /* a lista já está no aparelho; só o aviso de "carregou" não foi */ }
+  aviso(novos + " " + plural(novos, "produto carregado", "produtos carregados") + " do Controle.");
+  fq = ""; ir("/contar");
 }
 
 /* ================= tela: escolher produtos ================= */
@@ -618,7 +655,8 @@ view.addEventListener("click", async (e) => {
     } else if (a === "nova") { fq = "";
       atual = { id: novoId(), inicio: new Date().toISOString(), itens: [], setor: "", contador: nomeLogin() };
       salvarAtual(); bq = ""; bmodo = "todos"; ir("/buscar");
-    } else if (a === "continuar") ir("/contar");
+    } else if (a === "ctrl") { btn.disabled = true; carregarDoControle(btn.dataset.e); }
+    else if (a === "continuar") ir("/contar");
     else if (a === "descartar") {
       if (confirm("Descartar a recontagem em andamento? As quantidades lançadas serão perdidas.")) {
         atual = null;

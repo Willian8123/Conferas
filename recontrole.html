@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#37352f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Embu Excelente">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Controle · Recontagem</title>
+<link rel="stylesheet" href="ocorr.css">
+<link rel="stylesheet" href="paginas.css">
+<style>
+.cx-txt{width:100%;min-height:130px;resize:vertical;border:1px solid var(--border);border-radius:10px;padding:12px;font:inherit;font-size:16px;background:var(--bg);color:var(--text)}
+.cx-txt:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.cx-res{margin:12px 0}
+.cx-sum{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.cx-pill{font-size:13px;padding:4px 10px;border-radius:999px;background:var(--callout)}
+.cx-pill.ok{background:var(--green);color:var(--green-t)}
+.cx-pill.av{background:var(--yellow);color:var(--yellow-t)}
+.cx-itens{border:1px solid var(--border);border-radius:10px;max-height:340px;overflow:auto}
+.cx-it{display:flex;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border);font-size:14px}
+.cx-it:last-child{border-bottom:0}
+.cx-it .c{font-weight:700;min-width:56px;font-variant-numeric:tabular-nums}
+.cx-it .n{flex:1;min-width:0;overflow-wrap:anywhere}
+.cx-it.fora{background:var(--yellow);color:var(--yellow-t)}
+.cx-it button{border:0;background:transparent;color:var(--muted);font-size:18px;padding:4px 8px;cursor:pointer;border-radius:8px}
+.cx-dest{display:grid;gap:8px}
+.cx-d{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;cursor:pointer;background:var(--bg)}
+.cx-d.on{border-color:var(--accent);background:var(--blue)}
+.cx-d input{width:20px;height:20px;flex:none}
+.cx-d b{flex:1}
+.cx-d .q{font-size:13px;font-weight:700;color:var(--blue-t)}
+.cx-h{padding:12px 14px;border-bottom:1px solid var(--border);font-size:14px}
+.cx-h:last-child{border-bottom:0}
+.cx-h .top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.cx-h .top span{color:var(--muted);font-size:13px}
+.cx-h ul{margin:6px 0 0;padding-left:18px;color:var(--muted)}
+.cx-h .feito{color:#2c8a4b;font-weight:600}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#37352f;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;z-index:40;max-width:90vw;text-align:center}
+</style>
+<script src="rv-config.js"></script><script src="rv.js"></script><script src="acesso.js" data-exigir="controle"></script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Início</a>
+  <div class="ico">🎯</div>
+  <h1>Controle</h1>
+  <p class="sub">Cole a lista de recontagem, escolha os conferentes e envie. Cada um recebe a parte dele.</p>
+
+  <div class="sec">1. Cole a lista</div>
+  <textarea class="cx-txt" id="txt" placeholder="Cole aqui os produtos (código + nome). Pode ser tudo em uma linha, como vem do WhatsApp." autocomplete="off" spellcheck="false"></textarea>
+  <div class="row"><button class="btn" id="bColar" type="button">📋 Colar da área de transferência</button><button class="btn" id="bLimpar" type="button">Limpar</button></div>
+  <div class="cx-res hidden" id="res">
+    <div class="cx-sum" id="sum"></div>
+    <div class="cx-itens" id="itens"></div>
+  </div>
+
+  <div class="sec">2. Para quem enviar?</div>
+  <div class="cx-dest" id="dest"><div class="empty">Carregando conferentes…</div></div>
+  <div class="callout blue hidden" id="prev"><span class="ci">➗</span><p id="prevTxt"></p></div>
+
+  <div class="row"><button class="btn primary big" id="bEnviar" type="button" disabled>📤 Enviar recontagem</button></div>
+  <div class="callout hidden" id="msg"><p></p></div>
+
+  <div class="sec">Enviadas recentemente <small>(somem em 7 dias)</small></div>
+  <div class="list" id="hist"><div class="empty">Carregando…</div></div>
+</div>
+<div class="toast hidden" id="toast"></div>
+<script src="util.js"></script>
+<script src="produtos-dados.js"></script>
+<script src="produtos-fonte.js"></script>
+<script src="recparser.js"></script>
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const esc = (t) => String(t == null ? "" : t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const plural = (n, a, b) => (n === 1 ? a : b);
+let CAT = new Map();
+function indexar() { CAT = new Map(Catalogo.lista().map((p) => [p[0], p[1]])); }
+indexar();
+Catalogo.aoMudar(() => { indexar(); ler(); });
+Catalogo.carregar();
+
+let itens = [], info = { repetidos: 0, ignorado: "", fora: 0 };
+const removidos = new Set();
+let conferentes = [], sel = [], enviando = false;
+
+function toast(m) { const t = $("#toast"); t.textContent = m; t.classList.remove("hidden"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.add("hidden"), 3000); }
+function msg(txt, cor) { const m = $("#msg"); m.className = "callout" + (cor ? " " + cor : ""); m.querySelector("p").innerHTML = txt; }
+function msgOff() { $("#msg").className = "callout hidden"; }
+
+/* ---------- 1. ler a lista ---------- */
+const vivo = () => !!$("#txt"); // a guarda de acesso troca a página inteira quando o login não tem permissão
+function ler() {
+  if (!vivo()) return;
+  const r = RecParser.ler($("#txt").value, CAT);
+  itens = r.itens.filter((i) => !removidos.has(i.cod));
+  info = { repetidos: r.repetidos, ignorado: r.ignorado, fora: itens.filter((i) => !i.noCatalogo).length };
+  desenharItens(); desenharDest(); atualizarBotao();
+}
+function desenharItens() {
+  const box = $("#res");
+  if (!$("#txt").value.trim()) { box.classList.add("hidden"); return; }
+  box.classList.remove("hidden");
+  let s = `<span class="cx-pill ok">${itens.length} ${plural(itens.length, "item", "itens")}</span>`;
+  if (info.fora) s += `<span class="cx-pill av">${info.fora} fora do catálogo</span>`;
+  if (info.repetidos) s += `<span class="cx-pill">${info.repetidos} repetido${info.repetidos > 1 ? "s" : ""} removido${info.repetidos > 1 ? "s" : ""}</span>`;
+  if (removidos.size) s += `<span class="cx-pill">${removidos.size} tirado${removidos.size > 1 ? "s" : ""} por você</span>`;
+  if (info.ignorado) s += `<span class="cx-pill av" title="${esc(info.ignorado)}">texto antes do 1º código foi ignorado</span>`;
+  $("#sum").innerHTML = s;
+  $("#itens").innerHTML = itens.length ? itens.map((i) => `<div class="cx-it${i.noCatalogo ? " fora" : ""}"><span class="c">${esc(i.cod)}</span><span class="n">${esc(i.nome)}${i.noCatalogo ? " <small>(não está no catálogo)</small>" : ""}</span><button type="button" data-rm="${esc(i.cod)}" aria-label="Tirar da lista">✕</button></div>`).join("") : '<div class="empty">Não encontrei nenhum código nessa lista. Cada produto precisa começar pelo código (5 dígitos).</div>';
+}
+
+/* ---------- 2. conferentes ---------- */
+function partes() { return sel.length ? RecParser.dividir(itens, sel.length) : []; }
+function desenharDest() {
+  const box = $("#dest");
+  if (!conferentes.length) { box.innerHTML = '<div class="empty">Nenhum conferente cadastrado com o acesso "Conferente".</div>'; return; }
+  const p = partes();
+  box.innerHTML = conferentes.map((c) => {
+    const k = sel.indexOf(c.matricula), on = k >= 0;
+    return `<label class="cx-d${on ? " on" : ""}"><input type="checkbox" data-m="${esc(c.matricula)}" ${on ? "checked" : ""}><b>${esc(c.nome)}</b>${on && itens.length ? `<span class="q">${(p[k] || []).length} ${plural((p[k] || []).length, "item", "itens")}</span>` : ""}</label>`;
+  }).join("");
+  const prev = $("#prev");
+  if (sel.length > 1 && itens.length) {
+    prev.classList.remove("hidden");
+    $("#prevTxt").innerHTML = "Divisão em partes iguais, na ordem da lista: " + sel.map((m, k) => `<b>${esc((conferentes.find((c) => c.matricula === m) || {}).nome || m)}</b> ${(p[k] || []).length}`).join(" · ") + ".";
+  } else prev.classList.add("hidden");
+}
+function atualizarBotao() {
+  const b = $("#bEnviar");
+  const ok = itens.length > 0 && sel.length > 0 && sel.length <= itens.length && !enviando;
+  b.disabled = !ok;
+  b.textContent = enviando ? "Enviando…" : itens.length && sel.length ? `📤 Enviar ${itens.length} ${plural(itens.length, "item", "itens")} para ${sel.length} ${plural(sel.length, "conferente", "conferentes")}` : "📤 Enviar recontagem";
+  if (sel.length > itens.length && itens.length) msg("Você escolheu mais conferentes do que itens. Tire alguém da seleção.", "yellow"); else if (!enviando && $("#msg").classList.contains("yellow")) msgOff();
+}
+
+/* ---------- enviar ---------- */
+async function enviar() {
+  if (enviando || !itens.length || !sel.length) return;
+  const nomes = sel.map((m) => (conferentes.find((c) => c.matricula === m) || {}).nome || m);
+  if (!confirm(`Enviar ${itens.length} ${plural(itens.length, "item", "itens")} para ${nomes.join(" e ")}?`)) return;
+  enviando = true; atualizarBotao(); msgOff();
+  let r;
+  try {
+    r = await RV.rpc("rec_enviar", { p_itens: itens.map((i) => ({ codigo: i.cod, nome: i.nome, custom: !i.noCatalogo })), p_destinos: sel });
+  } catch (e) { enviando = false; atualizarBotao(); msg("Não foi possível enviar: " + esc(e.message || "erro"), "red"); return; }
+  // aviso no celular (a lista já foi enviada; se o aviso falhar, a bolinha aparece no app)
+  let aviso = "";
+  try {
+    const a = await RV.funcao(RV_CONFIG.FUNCAO_AVISO, { envio: r.envio });
+    const ok = a.avisados || [], sem = a.semAparelho || [], erro = a.falhas || [];
+    aviso = (ok.length ? `<br>🔔 Aviso no celular: ${ok.map(esc).join(", ")}.` : "") + (sem.length ? `<br>ℹ️ Sem avisos ativados (verão a bolinha no app): ${sem.map(esc).join(", ")}.` : "") + (erro.length ? `<br>⚠️ Falhou o aviso para: ${erro.map(esc).join(", ")}.` : "");
+  } catch (e) { aviso = "<br>ℹ️ O aviso no celular não saiu agora; eles verão a bolinha vermelha no app."; }
+  msg(`✅ <b>Recontagem enviada!</b> ${r.destinos.map((d) => `${esc(d.nome)} (${d.qtd})`).join(" · ")}${aviso}`, "green");
+  $("#txt").value = ""; removidos.clear(); sel = []; enviando = false;
+  ler(); carregarHist();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/* ---------- histórico ---------- */
+const hora = (iso) => { const d = new Date(iso), p = (n) => String(n).padStart(2, "0"); return `${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+async function carregarHist() {
+  if (!vivo()) return;
+  try {
+    const h = await RV.rpc("rec_historico");
+    if (!vivo()) return;
+    $("#hist").innerHTML = h.length ? h.map((e) => `<div class="cx-h"><div class="top"><b>${e.total} ${plural(e.total, "item", "itens")}</b><span>${hora(e.criado_em)}${e.por ? " · " + esc(e.por) : ""}</span></div>
+      <ul>${(e.destinos || []).map((d) => `<li>${esc(d.nome)}: ${d.qtd} ${plural(d.qtd, "item", "itens")} — ${d.carregados >= d.qtd ? '<span class="feito">já carregou na recontagem ✓</span>' : d.carregados ? `carregou ${d.carregados}/${d.qtd}` : "ainda não abriu"}</li>`).join("")}</ul>
+      <div class="row" style="margin:6px 0 0"><button class="btn mini danger" type="button" data-del="${e.id}">Apagar envio</button></div></div>`).join("") : '<div class="empty">Nada enviado nos últimos 7 dias.</div>';
+  } catch (e) { if (vivo()) $("#hist").innerHTML = '<div class="empty">Não consegui carregar agora (' + esc(e.message || "erro") + ').</div>'; }
+}
+async function carregarConf() {
+  if (!vivo()) return;
+  try { conferentes = await RV.rpc("rec_conferentes"); } catch (e) { conferentes = []; if (!vivo()) return; $("#dest").innerHTML = '<div class="empty">Não consegui carregar os conferentes (' + esc(e.message || "erro") + ').</div>'; return; }
+  if (vivo()) desenharDest();
+}
+
+/* ---------- eventos ---------- */
+let deb; $("#txt").addEventListener("input", () => { clearTimeout(deb); deb = setTimeout(() => { if (!$("#txt").value.trim()) removidos.clear(); ler(); }, 250); });
+$("#bLimpar").addEventListener("click", () => { $("#txt").value = ""; removidos.clear(); msgOff(); ler(); });
+$("#bColar").addEventListener("click", async () => {
+  try { const t = await navigator.clipboard.readText(); if (!t.trim()) return toast("A área de transferência está vazia."); $("#txt").value = t; removidos.clear(); ler(); }
+  catch (e) { toast("Não deu para colar sozinho. Toque na caixa e cole."); $("#txt").focus(); }
+});
+$("#itens").addEventListener("click", (e) => { const b = e.target.closest("[data-rm]"); if (!b) return; removidos.add(b.dataset.rm); ler(); });
+$("#dest").addEventListener("change", (e) => {
+  const m = e.target.dataset.m; if (!m) return;
+  sel = e.target.checked ? sel.concat(m) : sel.filter((x) => x !== m);
+  desenharDest(); atualizarBotao();
+});
+$("#bEnviar").addEventListener("click", enviar);
+$("#hist").addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-del]"); if (!b) return;
+  if (!confirm("Apagar este envio? Os conferentes que ainda não carregaram deixam de ver a lista.")) return;
+  try { await RV.rpc("rec_apagar", { p_envio: +b.dataset.del }); toast("Envio apagado."); carregarHist(); } catch (er) { toast(er.message || "Não consegui apagar."); }
+});
+
+ler(); carregarConf(); carregarHist();
+</script>
+</body>
+</html>

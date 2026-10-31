@@ -601,6 +601,7 @@ async function sincronizarGeral() {
 document.addEventListener("visibilitychange", () => { if (!document.hidden) sincronizarGeral(); });
 
 /* ---- dividir a lista com outro conferente ---- */
+// O modal é montado UMA vez; marcar/pesquisar só atualiza o que mudou (a rolagem não volta ao topo).
 let dSel = new Set(), dDest = [], dConf = [], dEnv = false;
 const meuMat = () => { try { return (RV.perfilCache() || {}).matricula || ""; } catch (e) { return ""; } };
 function fecharDividir() { const m = $("#dmod"); if (m) m.remove(); }
@@ -613,30 +614,55 @@ async function abrirDividir() {
   m.addEventListener("click", (e) => { if (e.target === m) fecharDividir(); });
   try { dConf = (await RV.rpc("rec_conferentes")).filter((c) => c.matricula !== meuMat()); }
   catch (e) { m.querySelector(".dbox").innerHTML = `<h2>Dividir lista</h2><div class="callout yellow"><p>Não consegui carregar os conferentes (${esc(e.message || "erro")}). É preciso internet para dividir.</p></div><div class="row"><button class="btn" data-d="fechar" type="button">Fechar</button></div>`; return; }
-  desenharDividir();
+  montarDividir();
 }
-function desenharDividir() {
+function montarDividir() {
   const m = $("#dmod"); if (!m) return;
-  const its = atual.itens, nSel = dSel.size, k = dDest.length;
-  const por = k && nSel ? Math.floor(nSel / k) : 0;
+  const its = atual.itens;
   m.querySelector(".dbox").innerHTML = `<h2>Dividir lista</h2>
     <p class="sub" style="margin:0 0 8px">1. Marque os itens que vão para outro conferente. Itens de um ticket continuam no <b>mesmo ticket</b>, e as quantidades já lançadas <b>vão junto</b>.</p>
-    <div class="row" style="margin:4px 0"><button class="btn mini" data-d="todos" type="button">${nSel === its.length ? "Desmarcar todos" : "Marcar todos"}</button><span class="dcont">${nSel} de ${its.length}</span></div>
-    <div class="cx-itens dlista">${its.map((it) => { const c = codDoItem(it) || "—"; return `<label class="cx-it dli"><input type="checkbox" data-dsel="${esc(it.cod)}" ${dSel.has(it.cod) ? "checked" : ""}><span class="c">${esc(c)}</span><span class="n">${esc(it.nome)}${it.rec ? ` <small>(ticket ${tk(it.rec)})</small>` : ""}${temDigitado(it) ? " <small>(com quantidade: vai junto)</small>" : ""}</span></label>`; }).join("")}</div>
+    <input id="dq" class="search" type="search" inputmode="search" autocomplete="off" placeholder="Pesquisar por código ou nome…" style="width:100%">
+    <div class="row" style="margin:8px 0 4px;align-items:center"><button class="btn mini" id="dtodos" data-d="todos" type="button"></button><span class="dcont" id="dcont"></span></div>
+    <div class="cx-itens dlista" id="dlista">${its.map((it) => { const c = codDoItem(it) || "—"; return `<label class="cx-it dli" data-cod="${esc(it.cod)}" data-b="${esc(norm(c + " " + it.nome))}"><input type="checkbox" data-dsel="${esc(it.cod)}"><span class="c">${esc(c)}</span><span class="n">${esc(it.nome)}${it.rec ? " <small>(ticket " + tk(it.rec) + ")</small>" : ""}${temDigitado(it) ? " <small>(com quantidade: vai junto)</small>" : ""}</span></label>`; }).join("")}<div class="empty hidden" id="dvazio">Nenhum item encontrado.</div></div>
     <p class="sub" style="margin:12px 0 8px">2. Para quem enviar?</p>
-    ${dConf.length ? dConf.map((c) => `<label class="cx-d${dDest.includes(c.matricula) ? " on" : ""}"><input type="checkbox" data-ddest="${esc(c.matricula)}" ${dDest.includes(c.matricula) ? "checked" : ""}><b>${esc(c.nome)}</b></label>`).join("") : '<div class="empty">Não há outro conferente cadastrado.</div>'}
-    ${k > 1 && nSel >= k ? `<div class="callout blue"><span class="ci">➗</span><p>${nSel} itens divididos em partes iguais entre ${k} conferentes (${por}${nSel % k ? " ou " + (por + 1) : ""} cada).</p></div>` : ""}
+    ${dConf.length ? dConf.map((c) => `<label class="cx-d" data-mat="${esc(c.matricula)}"><input type="checkbox" data-ddest="${esc(c.matricula)}"><b>${esc(c.nome)}</b></label>`).join("") : '<div class="empty">Não há outro conferente cadastrado.</div>'}
+    <div class="callout blue hidden" id="dinfo"><span class="ci">➗</span><p></p></div>
     <div class="callout hidden" id="dmsg"><p></p></div>
-    <div class="row"><button class="btn primary big" data-d="enviar" type="button" ${nSel && k && nSel >= k && !dEnv ? "" : "disabled"}>${dEnv ? "Enviando…" : nSel && k ? `📤 Enviar ${nSel} ${plural(nSel, "item", "itens")}` : "📤 Enviar"}</button><button class="btn" data-d="fechar" type="button">Cancelar</button></div>`;
+    <div class="dfoot"><button class="btn primary big" id="denviar" data-d="enviar" type="button" disabled>📤 Enviar</button><button class="btn" data-d="fechar" type="button">Cancelar</button></div>`;
+  atualizarDividir();
+}
+// linhas que passam na pesquisa (todas as palavras precisam aparecer no código ou no nome)
+function dVisiveis() { return Array.from(document.querySelectorAll("#dlista .dli")).filter((l) => !l.classList.contains("hidden")); }
+function dFiltrar() {
+  const termos = norm($("#dq").value).split(/\s+/).filter(Boolean);
+  let n = 0;
+  document.querySelectorAll("#dlista .dli").forEach((l) => { const ok = termos.every((t) => l.dataset.b.includes(t)); l.classList.toggle("hidden", !ok); if (ok) n++; });
+  $("#dvazio").classList.toggle("hidden", n > 0);
+  atualizarDividir();
+}
+function atualizarDividir() {
+  if (!$("#dmod") || !$("#dlista")) return;
+  const total = atual.itens.length, nSel = dSel.size, k = dDest.length, vis = dVisiveis();
+  const filtrando = !!$("#dq").value.trim();
+  const selVis = vis.filter((l) => dSel.has(l.dataset.cod)).length;
+  $("#dcont").textContent = (filtrando ? vis.length + " de " + total + " mostrados · " : "") + nSel + " " + plural(nSel, "marcado", "marcados");
+  $("#dtodos").textContent = vis.length && selVis === vis.length ? (filtrando ? "Desmarcar os mostrados" : "Desmarcar todos") : (filtrando ? "Marcar os " + vis.length + " mostrados" : "Marcar todos");
+  $("#dtodos").disabled = !vis.length;
+  document.querySelectorAll("#dmod [data-ddest]").forEach((c) => { c.closest(".cx-d").classList.toggle("on", dDest.includes(c.dataset.ddest)); });
+  const por = k && nSel ? Math.floor(nSel / k) : 0, info = $("#dinfo");
+  if (k > 1 && nSel >= k) { info.classList.remove("hidden"); info.querySelector("p").textContent = nSel + " itens divididos em partes iguais entre " + k + " conferentes (" + por + (nSel % k ? " ou " + (por + 1) : "") + " cada)."; } else info.classList.add("hidden");
+  const b = $("#denviar");
+  b.disabled = !(nSel && k && nSel >= k && !dEnv);
+  b.textContent = dEnv ? "Enviando…" : nSel && k ? "📤 Enviar " + nSel + " " + plural(nSel, "item", "itens") : "📤 Enviar";
 }
 async function enviarDividir() {
   const its = atual.itens.filter((i) => dSel.has(i.cod));
   if (!its.length || !dDest.length || dEnv) return;
-  dEnv = true; desenharDividir();
+  dEnv = true; atualizarDividir();
   const itens = its.map((it, k) => ({ codigo: codDoItem(it) || ("SC" + (k + 1)), nome: it.nome, custom: !!it.custom, rec: it.rec || null, q: temDigitado(it) ? it.q : null }));
   let r;
   try { r = await RV.rpc("rec_compartilhar", { p_itens: itens, p_destinos: dDest }); }
-  catch (e) { dEnv = false; desenharDividir(); const d = $("#dmsg"); if (d) { d.className = "callout red"; d.querySelector("p").textContent = "Não foi possível enviar: " + (e.message || "erro"); } return; }
+  catch (e) { dEnv = false; atualizarDividir(); const d = $("#dmsg"); if (d) { d.className = "callout red"; d.querySelector("p").textContent = "Não foi possível enviar: " + (e.message || "erro"); } return; }
   // sai da minha lista
   const fora = new Set(its.map((i) => i.cod));
   atual.itens = atual.itens.filter((i) => !fora.has(i.cod)); fora.forEach((c) => abertos.delete(c));
@@ -648,22 +674,24 @@ async function enviarDividir() {
   aviso("Enviado: " + r.destinos.map((d) => d.nome.split(" ")[0] + " " + d.qtd).join(", ") + "." + extra);
 }
 document.addEventListener("click", (e) => {
-  const t = e.target;
-  const d = t.closest && t.closest("[data-d]");
-  if (d && $("#dmod") && $("#dmod").contains(d)) {
-    const a = d.dataset.d;
-    if (a === "fechar") fecharDividir();
-    else if (a === "todos") { dSel = dSel.size === atual.itens.length ? new Set() : new Set(atual.itens.map((i) => i.cod)); desenharDividir(); }
-    else if (a === "enviar") enviarDividir();
-    return;
+  const d = e.target.closest && e.target.closest("[data-d]");
+  if (!d || !$("#dmod") || !$("#dmod").contains(d)) return;
+  const a = d.dataset.d;
+  if (a === "fechar") fecharDividir();
+  else if (a === "enviar") enviarDividir();
+  else if (a === "todos") {
+    const vis = dVisiveis(), todas = vis.length && vis.every((l) => dSel.has(l.dataset.cod));
+    vis.forEach((l) => { const c = l.dataset.cod; if (todas) dSel.delete(c); else dSel.add(c); l.querySelector("input").checked = !todas; });
+    atualizarDividir();
   }
 });
 document.addEventListener("change", (e) => {
   const t = e.target;
   if (!$("#dmod") || !$("#dmod").contains(t)) return;
-  if (t.dataset.dsel) { if (t.checked) dSel.add(t.dataset.dsel); else dSel.delete(t.dataset.dsel); desenharDividir(); }
-  else if (t.dataset.ddest) { dDest = t.checked ? dDest.concat(t.dataset.ddest) : dDest.filter((x) => x !== t.dataset.ddest); desenharDividir(); }
+  if (t.dataset.dsel) { if (t.checked) dSel.add(t.dataset.dsel); else dSel.delete(t.dataset.dsel); atualizarDividir(); }
+  else if (t.dataset.ddest) { dDest = t.checked ? dDest.concat(t.dataset.ddest) : dDest.filter((x) => x !== t.dataset.ddest); atualizarDividir(); }
 });
+document.addEventListener("input", (e) => { if (e.target.id === "dq") dFiltrar(); });
 
 /* ================= tela: quantidades ================= */
 const EXEMPLO = { pallet: "Ex.: 15+20+12", lastro: "Ex.: 15+20+12", cx: "Ex.: 15+20+12", un: "Ex.: 24" };

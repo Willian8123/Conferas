@@ -385,6 +385,7 @@ function vInicio() {
 
 /* ---- listas enviadas pelo Controle / compartilhadas por colegas ---- */
 const FILA = "rec_conclusoes_v1";
+const tk = (id) => "#" + String(id).padStart(4, "0");
 const codDoItem = (i) => (i.custom ? i.codUser : i.cod);
 // Quantos itens da lista pendente já estão na recontagem em andamento?
 function situacaoLista(env) {
@@ -404,8 +405,8 @@ async function carregarCtrl() {
   ctrlLista = lista;
   box2.innerHTML = lista.map((e) => {
     const sit = situacaoLista(e), comp = e.tipo === "compartilhada";
-    const titulo = comp ? "Lista compartilhada" : "Recontagem pendente do Controle";
-    return `<div class="callout blue"><span class="ci">${comp ? "🤝" : "📥"}</span><p><b>${titulo}</b><br>${sit.n} ${plural(sit.n, "produto", "produtos")} para contar${e.de ? " · enviada por " + esc(e.de) : ""}${e.criado_em ? " · " + dataBR(e.criado_em) : ""}<br><small>Só sai daqui quando você concluir a recontagem.</small></p></div>
+    const titulo = "Ticket " + tk(e.id) + " · " + (comp ? "lista compartilhada" : "recontagem do Controle");
+    return `<div class="callout blue"><span class="ci">${comp ? "🤝" : "📥"}</span><p><b>${titulo}</b><br>${sit.n} ${plural(sit.n, "produto", "produtos")} com você${e.de ? " · enviada por " + esc(e.de) : ""}${e.criado_em ? " · " + dataBR(e.criado_em) : ""}<br><small>Só sai daqui quando você concluir a recontagem.</small></p></div>
       <div class="row">${sit.faltam
         ? `<button class="btn primary big" data-a="ctrl" data-e="${e.id}">📥 Carregar na recontagem${sit.faltam < sit.n ? " (faltam " + sit.faltam + ")" : ""}</button>`
         : '<button class="btn primary big" data-a="continuar">▶️ Continuar recontagem</button>'}</div>`;
@@ -571,9 +572,9 @@ function desenharDividir() {
   const its = atual.itens, nSel = dSel.size, k = dDest.length;
   const por = k && nSel ? Math.floor(nSel / k) : 0;
   m.querySelector(".dbox").innerHTML = `<h2>Dividir lista</h2>
-    <p class="sub" style="margin:0 0 8px">1. Marque os itens que vão para outro conferente.</p>
+    <p class="sub" style="margin:0 0 8px">1. Marque os itens que vão para outro conferente. Itens de um ticket continuam no <b>mesmo ticket</b>.</p>
     <div class="row" style="margin:4px 0"><button class="btn mini" data-d="todos" type="button">${nSel === its.length ? "Desmarcar todos" : "Marcar todos"}</button><span class="dcont">${nSel} de ${its.length}</span></div>
-    <div class="cx-itens dlista">${its.map((it) => { const c = codDoItem(it) || "—"; return `<label class="cx-it dli"><input type="checkbox" data-dsel="${esc(it.cod)}" ${dSel.has(it.cod) ? "checked" : ""}><span class="c">${esc(c)}</span><span class="n">${esc(it.nome)}${temDigitado(it) ? " <small>(já tem quantidade)</small>" : ""}</span></label>`; }).join("")}</div>
+    <div class="cx-itens dlista">${its.map((it) => { const c = codDoItem(it) || "—"; return `<label class="cx-it dli"><input type="checkbox" data-dsel="${esc(it.cod)}" ${dSel.has(it.cod) ? "checked" : ""}><span class="c">${esc(c)}</span><span class="n">${esc(it.nome)}${it.rec ? ` <small>(ticket ${tk(it.rec)})</small>` : ""}${temDigitado(it) ? " <small>(já tem quantidade)</small>" : ""}</span></label>`; }).join("")}</div>
     <p class="sub" style="margin:12px 0 8px">2. Para quem enviar?</p>
     ${dConf.length ? dConf.map((c) => `<label class="cx-d${dDest.includes(c.matricula) ? " on" : ""}"><input type="checkbox" data-ddest="${esc(c.matricula)}" ${dDest.includes(c.matricula) ? "checked" : ""}><b>${esc(c.nome)}</b></label>`).join("") : '<div class="empty">Não há outro conferente cadastrado.</div>'}
     ${k > 1 && nSel >= k ? `<div class="callout blue"><span class="ci">➗</span><p>${nSel} itens divididos em partes iguais entre ${k} conferentes (${por}${nSel % k ? " ou " + (por + 1) : ""} cada).</p></div>` : ""}

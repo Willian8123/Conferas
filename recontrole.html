@@ -80,6 +80,7 @@
 "use strict";
 const $ = (s) => document.querySelector(s);
 const esc = (t) => String(t == null ? "" : t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const tk = (id) => "#" + String(id).padStart(4, "0");
 const plural = (n, a, b) => (n === 1 ? a : b);
 let CAT = new Map();
 function indexar() { CAT = new Map(Catalogo.lista().map((p) => [p[0], p[1]])); }
@@ -158,7 +159,7 @@ async function enviar() {
     const ok = a.avisados || [], sem = a.semAparelho || [], erro = a.falhas || [];
     aviso = (ok.length ? `<br>🔔 Aviso no celular: ${ok.map(esc).join(", ")}.` : "") + (sem.length ? `<br>ℹ️ Sem avisos ativados (verão a bolinha no app): ${sem.map(esc).join(", ")}.` : "") + (erro.length ? `<br>⚠️ Falhou o aviso para: ${erro.map(esc).join(", ")}.` : "");
   } catch (e) { const det = (e && e.dados && e.dados.detalhe) ? ": " + e.dados.detalhe : ""; aviso = "<br>ℹ️ O aviso no celular não saiu agora (" + esc((e && e.message || "erro") + det) + "); eles verão a bolinha vermelha no app."; }
-  msg(`✅ <b>Recontagem enviada!</b> ${r.destinos.map((d) => `${esc(d.nome)} (${d.qtd})`).join(" · ")}${aviso}`, "green");
+  msg(`✅ <b>Recontagem enviada!</b> Ticket ${tk(r.envio)} · ${r.destinos.map((d) => `${esc(d.nome)} (${d.qtd})`).join(" · ")}${aviso}`, "green");
   $("#txt").value = ""; removidos.clear(); sel = []; enviando = false;
   ler(); carregarHist();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -171,7 +172,7 @@ async function carregarHist() {
   try {
     const h = await RV.rpc("rec_historico");
     if (!vivo()) return;
-    $("#hist").innerHTML = h.length ? h.map((e) => `<div class="cx-h"><div class="top"><b>${e.tipo === "compartilhada" ? "🤝 Compartilhada" : "📥 Do Controle"} · ${e.total} ${plural(e.total, "item", "itens")}</b><span>${hora(e.criado_em)}${e.por ? " · " + esc(e.por) : ""}</span></div>
+    $("#hist").innerHTML = h.length ? h.map((e) => `<div class="cx-h"><div class="top"><b>🎫 Ticket ${tk(e.id)} · ${e.tipo === "compartilhada" ? "🤝 compartilhada" : "do Controle"} · ${e.total} ${plural(e.total, "item", "itens")}</b><span>${hora(e.criado_em)}${e.por ? " · " + esc(e.por) : ""}</span></div>
       <ul class="cx-ul">${(e.destinos || []).map((d) => { const pend = d.qtd - (d.concluidos || 0); return `<li><span>${esc(d.nome)}: ${d.qtd} ${plural(d.qtd, "item", "itens")} — ${pend <= 0 ? '<span class="feito">concluiu ✓</span>' : d.concluidos ? `${d.concluidos}/${d.qtd} concluídos` : d.carregados ? "carregou, ainda contando" : "ainda não abriu"}</span>${pend > 0 ? `<button class="btn mini" type="button" data-rep="${e.id}|${esc(d.matricula)}|${esc(d.nome)}|${pend}">↪ Repassar ${pend}</button>` : ""}</li>`; }).join("")}</ul>
       <div class="row" style="margin:6px 0 0"><button class="btn mini danger" type="button" data-del="${e.id}">Apagar envio</button></div></div>`).join("") : '<div class="empty">Nada enviado nos últimos 7 dias.</div>';
   } catch (e) { if (vivo()) $("#hist").innerHTML = '<div class="empty">Não consegui carregar agora (' + esc(e.message || "erro") + ').</div>'; }
@@ -242,7 +243,7 @@ document.addEventListener("click", async (e) => {
     aviso = (a.avisados || []).length ? `<br>🔔 Aviso no celular: ${(a.avisados || []).map(esc).join(", ")}.` : "";
     if ((a.semAparelho || []).length) aviso += `<br>ℹ️ Sem avisos ativados (verão o sininho): ${a.semAparelho.map(esc).join(", ")}.`;
   } catch (er) { aviso = "<br>ℹ️ O aviso no celular não saiu agora; eles verão o sininho no app."; }
-  msg(`✅ <b>Lista repassada.</b> ${esc(r.de || "")} → ${r.destinos.map((d) => `${esc(d.nome)} (${d.qtd})`).join(" · ")}${aviso}`, "green");
+  msg(`✅ <b>Lista repassada</b> (ticket ${tk(r.envio)}). ${esc(r.de || "")} → ${r.destinos.map((d) => `${esc(d.nome)} (${d.qtd})`).join(" · ")}${aviso}`, "green");
   carregarHist(); window.scrollTo({ top: 0, behavior: "smooth" });
 });
 

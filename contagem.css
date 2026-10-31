@@ -122,3 +122,17 @@
 .fbar .fmeta{font-size:13px;color:var(--muted);min-height:16px;padding:2px 2px 0}
 
 .pc .ph .resu b{display:inline;font-size:inherit;-webkit-line-clamp:unset}
+
+.cola-txt{width:100%;min-height:120px;resize:vertical;border:1px solid var(--border);border-radius:10px;padding:12px;font:inherit;font-size:16px;background:var(--bg);color:var(--text)}
+.cola-txt:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.cx-sum{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 8px}
+.cx-pill{font-size:13px;padding:4px 10px;border-radius:999px;background:var(--callout)}
+.cx-pill.ok{background:var(--green);color:var(--green-t)}
+.cx-pill.av{background:var(--yellow);color:var(--yellow-t)}
+.cx-itens{border:1px solid var(--border);border-radius:10px;max-height:300px;overflow:auto}
+.cx-it{display:flex;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border);font-size:14px}
+.cx-it:last-child{border-bottom:0}
+.cx-it .c{font-weight:700;min-width:56px;font-variant-numeric:tabular-nums}
+.cx-it .n{flex:1;min-width:0;overflow-wrap:anywhere}
+.cx-it.fora{background:var(--yellow);color:var(--yellow-t)}
+.cx-it button{border:0;background:transparent;color:var(--muted);font-size:18px;padding:4px 8px;cursor:pointer;border-radius:8px}

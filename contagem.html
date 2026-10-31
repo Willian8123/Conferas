@@ -23,6 +23,7 @@
 <script src="util.js"></script>
 <script src="produtos-dados.js"></script>
 <script src="produtos-fonte.js"></script>
+<script src="recparser.js"></script>
 <script src="pdf-lib.min.js"></script>
 <script>
 "use strict";
@@ -398,20 +399,25 @@ async function carregarCtrl() {
   ctrlLista = lista;
 }
 let ctrlLista = [];
-async function carregarDoControle(id) {
-  const env = ctrlLista.find((x) => String(x.id) === String(id));
-  if (!env) return;
+// Acrescenta produtos [{cod, nome, fora}] à recontagem em andamento (sem repetir). Devolve quantos entraram.
+function juntarItens(lista) {
   if (!atual) atual = { id: novoId(), inicio: new Date().toISOString(), itens: [], setor: "", contador: nomeLogin() };
   const tem = new Set(atual.itens.map((i) => (i.custom ? i.codUser : i.cod)));
   let novos = 0;
-  (env.itens || []).forEach((x) => {
-    const cod = String(x.codigo);
-    if (tem.has(cod)) return;
-    tem.add(cod);
-    if (x.custom || !NOME.has(cod)) atual.itens.push({ cod: "X" + novoId(), nome: x.nome, custom: true, codUser: cod, q: qVazio() });
-    else atual.itens.push({ cod, nome: NOME.get(cod), q: qVazio() });
+  lista.forEach((x) => {
+    if (tem.has(x.cod)) return;
+    tem.add(x.cod);
+    if (x.fora || !NOME.has(x.cod)) atual.itens.push({ cod: "X" + novoId(), nome: x.nome, custom: true, codUser: x.cod, q: qVazio() });
+    else atual.itens.push({ cod: x.cod, nome: NOME.get(x.cod), q: qVazio() });
     novos++;
   });
+  salvarAtual();
+  return novos;
+}
+async function carregarDoControle(id) {
+  const env = ctrlLista.find((x) => String(x.id) === String(id));
+  if (!env) return;
+  const novos = juntarItens((env.itens || []).map((x) => ({ cod: String(x.codigo), nome: x.nome, fora: !!x.custom })));
   salvarAtual();
   try { await RV.rpc("rec_carregar", { p_envio: +env.id }); } catch (e) { /* a lista já está no aparelho; só o aviso de "carregou" não foi */ }
   aviso(novos + " " + plural(novos, "produto carregado", "produtos carregados") + " do Controle.");
@@ -424,7 +430,8 @@ function vBuscar() {
   view.innerHTML = `<div class="ico">🔎</div><h1>Escolher produtos</h1>
     <p class="sub">Pesquise e marque os produtos. Pode pesquisar quantos quiser: as marcações ficam guardadas.</p>
     <div class="pbox"><input id="bq" class="search" type="search" inputmode="search" autocomplete="off" placeholder="Ex.: 2538  ·  pilsen 600  ·  guarana 2l" style="width:100%" value="${esc(bq)}"></div>
-    <div class="chips"><button class="chip" data-m="todos" type="button">Pesquisar</button><button class="chip" data-m="marcados" type="button"></button></div>
+    <div class="chips"><button class="chip" data-m="todos" type="button">Pesquisar</button><button class="chip" data-m="marcados" type="button"></button><button class="chip" data-m="colar" type="button">📋 Colar lista</button></div>
+    <div id="bcolar" class="hidden"></div>
     <div class="pmeta" id="bmeta"></div><div id="blista"></div>
     <button class="btn pmore hidden" id="bmais" type="button">Mostrar mais</button>
     <details class="novo"><summary>+ Produto que não está na lista</summary>
@@ -444,6 +451,10 @@ function atualizarChips() {
 function atualizarBusca() {
   atualizarChips();
   const marc = new Set(atual.itens.map((i) => i.cod));
+  const colar = bmodo === "colar";
+  [".pbox", "#bmeta", "#blista", "#bmais", "details.novo"].forEach((q) => { const e = $(q); if (e) e.classList.toggle("hidden", colar); });
+  $("#bcolar").classList.toggle("hidden", !colar);
+  if (colar) { desenharColar(); return; }
   let rows = [];
   let meta = "";
   if (bmodo === "marcados") {
@@ -473,6 +484,47 @@ function alternar(cod) {
   } else atual.itens.push({ cod, nome: NOME.get(cod) || cod, q: qVazio() });
   salvarAtual();
   return true;
+}
+
+/* ---- colar lista (do WhatsApp ou de onde vier) ---- */
+let cTxt = "", cTirados = new Set(), cRes = null;
+function lerColado() {
+  const r = RecParser.ler(cTxt, NOME);
+  r.itens = r.itens.filter((i) => !cTirados.has(i.cod));
+  cRes = r;
+}
+function desenharColar() {
+  const box = $("#bcolar");
+  if (!box.firstChild) {
+    box.innerHTML = `<p class="sub" style="margin:8px 0">Copie a lista no WhatsApp e cole aqui. O app separa os produtos sozinho.</p>
+      <textarea id="ctxt" class="cola-txt" placeholder="Cole aqui a lista (código + nome). Pode vir tudo em uma linha." autocomplete="off" spellcheck="false"></textarea>
+      <div class="row"><button class="btn" id="cpaste" type="button">📋 Colar da área de transferência</button><button class="btn" id="climpar" type="button">Limpar</button></div>
+      <div id="cres"></div>`;
+    $("#ctxt").value = cTxt;
+  }
+  lerColado();
+  const r = cRes, res = $("#cres");
+  if (!cTxt.trim()) { res.innerHTML = ""; atualizarChips(); return; }
+  const marc = new Set(atual.itens.map((i) => (i.custom ? i.codUser : i.cod)));
+  const novos = r.itens.filter((i) => !marc.has(i.cod));
+  const ja = r.itens.length - novos.length;
+  const fora = novos.filter((i) => !i.noCatalogo).length;
+  let pills = `<span class="cx-pill ok">${r.itens.length} ${plural(r.itens.length, "produto", "produtos")}</span>`;
+  if (ja) pills += `<span class="cx-pill">${ja} já ${plural(ja, "marcado", "marcados")}</span>`;
+  if (fora) pills += `<span class="cx-pill av">${fora} fora da lista de produtos</span>`;
+  if (r.repetidos) pills += `<span class="cx-pill">${r.repetidos} repetido${r.repetidos > 1 ? "s" : ""} removido${r.repetidos > 1 ? "s" : ""}</span>`;
+  res.innerHTML = `<div class="cx-sum">${pills}</div>` + (r.itens.length
+    ? `<div class="cx-itens">${r.itens.map((i) => `<div class="cx-it${i.noCatalogo ? " fora" : ""}"><span class="c">${esc(i.cod)}</span><span class="n">${esc(i.nome)}</span><button type="button" data-ctirar="${esc(i.cod)}" aria-label="Tirar da lista">✕</button></div>`).join("")}</div>
+       <div class="row"><button class="btn primary big" id="cadd" type="button" ${novos.length ? "" : "disabled"}>➕ Adicionar ${novos.length} ${plural(novos.length, "produto", "produtos")} à recontagem</button></div>`
+    : '<div class="empty">Não encontrei nenhum código. Cada produto precisa começar pelo código (5 dígitos).</div>');
+  atualizarChips();
+}
+function adicionarColados() {
+  if (!cRes) return;
+  const n = juntarItens(cRes.itens.map((i) => ({ cod: i.cod, nome: i.nome, fora: !i.noCatalogo })));
+  cTxt = ""; cTirados.clear(); cRes = null;
+  aviso(n + " " + plural(n, "produto adicionado", "produtos adicionados") + " à recontagem.");
+  bmodo = "marcados"; atualizarBusca();
 }
 
 /* ================= tela: quantidades ================= */
@@ -603,6 +655,7 @@ view.addEventListener("input", (e) => {
   const t = e.target;
   if (t.id === "fq") { fq = t.value; aplicarFiltro(); return; }
   if (t.id === "bq") { bq = t.value; bshow = 60; atualizarBusca(); return; }
+  if (t.id === "ctxt") { cTxt = t.value; cTirados.clear(); clearTimeout(desenharColar.t); desenharColar.t = setTimeout(desenharColar, 250); return; }
   if (t.id === "st") { atual.setor = t.value; salvarAtual(); return; }
   if (t.classList.contains("qi")) {
     const card = t.closest(".pc");
@@ -617,6 +670,14 @@ view.addEventListener("click", async (e) => {
   const chip = t.closest(".chip");
   if (chip) { bmodo = chip.dataset.m; bshow = 60; atualizarBusca(); return; }
   if (t.id === "bmais") { bshow += 100; atualizarBusca(); return; }
+  if (t.id === "cadd") { adicionarColados(); return; }
+  if (t.id === "climpar") { cTxt = ""; cTirados.clear(); $("#ctxt").value = ""; desenharColar(); return; }
+  if (t.id === "cpaste") {
+    try { const x = await navigator.clipboard.readText(); if (!x.trim()) { aviso("A área de transferência está vazia."); return; } cTxt = x; cTirados.clear(); $("#ctxt").value = x; desenharColar(); }
+    catch (er) { aviso("Não deu para colar sozinho. Toque na caixa e cole."); $("#ctxt").focus(); }
+    return;
+  }
+  { const tb = t.closest("[data-ctirar]"); if (tb) { cTirados.add(tb.dataset.ctirar); desenharColar(); return; } }
   const sel = t.closest(".sel");
   if (sel) { if (alternar(sel.dataset.cod)) atualizarBusca(); return; }
   if (t.id === "nadd") {

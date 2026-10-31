@@ -394,16 +394,41 @@ function situacaoLista(env) {
   return { n: todos.length, faltam: faltam.length };
 }
 // A pendência NÃO tem botão de fechar: só some quando a recontagem é concluída (ou o Controle apaga/repassa).
+const normQ = (q) => { const o = qVazio(); if (q && typeof q === "object") ORDEM.forEach((t) => { if (q[t] != null) o[t] = String(q[t]); }); return o; };
+let syncP = null;
+// Busca as pendências no servidor. Se a recontagem em andamento já tem itens DO MESMO TICKET, o que chegou
+// (ex.: itens devolvidos por outro conferente, já com as quantidades) entra direto nela. Devolve quantos entraram (-1 = sem rede).
+function sincronizarPendencias() {
+  if (syncP) return syncP;
+  const pr = (async () => {
+    let lista;
+    try { lista = await RV.rpc("rec_minhas"); } catch (e) { return -1; }
+    if (!Array.isArray(lista)) return -1;
+    ctrlLista = lista;
+    let juntos = 0;
+    for (const env of lista) {
+      if (!atual || !atual.itens.some((i) => String(i.rec) === String(env.id))) continue;
+      const tem = new Set(atual.itens.map(codDoItem));
+      const novos = (env.itens || []).filter((x) => !tem.has(String(x.codigo)));
+      if (!novos.length) continue;
+      juntos += juntarItens(novos.map((x) => ({ cod: String(x.codigo), nome: x.nome, fora: !!x.custom, rec: env.id, q: x.q })));
+      try { await RV.rpc("rec_carregar", { p_envio: +env.id }); } catch (e) { /* já está no aparelho */ }
+    }
+    return juntos;
+  })();
+  syncP = pr; pr.then(() => { syncP = null; }, () => { syncP = null; });
+  return pr;
+}
 async function carregarCtrl() {
   const box = $("#ctrlBox");
   if (!box || !window.RV || !RV.logado()) return;
   await enviarConclusoes();
-  let lista;
-  try { lista = await RV.rpc("rec_minhas"); } catch (e) { return; }
+  const n = await sincronizarPendencias();
+  if (n < 0) return;
+  if (n > 0) aviso(n + " " + plural(n, "item voltou", "itens voltaram") + " para a sua recontagem" + ", já com as quantidades.");
   const box2 = $("#ctrlBox");
-  if (!box2 || !Array.isArray(lista)) return;
-  ctrlLista = lista;
-  box2.innerHTML = lista.map((e) => {
+  if (!box2) return;
+  box2.innerHTML = ctrlLista.map((e) => {
     const sit = situacaoLista(e), comp = e.tipo === "compartilhada";
     const titulo = "Ticket " + tk(e.id) + " · " + (comp ? "lista compartilhada" : "recontagem do Controle");
     return `<div class="callout blue"><span class="ci">${comp ? "🤝" : "📥"}</span><p><b>${titulo}</b><br>${sit.n} ${plural(sit.n, "produto", "produtos")} com você${e.de ? " · enviada por " + esc(e.de) : ""}${e.criado_em ? " · " + dataBR(e.criado_em) : ""}<br><small>Só sai daqui quando você concluir a recontagem.</small></p></div>
@@ -430,8 +455,8 @@ function juntarItens(lista) {
     const ex = porCod.get(x.cod);
     if (ex) { if (x.rec && !ex.rec) { ex.rec = x.rec; ex.recCod = x.cod; } return; }
     const it = (x.fora || !NOME.has(x.cod))
-      ? { cod: "X" + novoId(), nome: x.nome, custom: true, codUser: x.cod, q: qVazio() }
-      : { cod: x.cod, nome: NOME.get(x.cod), q: qVazio() };
+      ? { cod: "X" + novoId(), nome: x.nome, custom: true, codUser: x.cod, q: normQ(x.q) }
+      : { cod: x.cod, nome: NOME.get(x.cod), q: normQ(x.q) };
     if (x.rec) { it.rec = x.rec; it.recCod = x.cod; }
     atual.itens.push(it); porCod.set(x.cod, it); novos++;
   });
@@ -441,7 +466,7 @@ function juntarItens(lista) {
 async function carregarDoControle(id) {
   const env = ctrlLista.find((x) => String(x.id) === String(id));
   if (!env) return;
-  const novos = juntarItens((env.itens || []).map((x) => ({ cod: String(x.codigo), nome: x.nome, fora: !!x.custom, rec: env.id })));
+  const novos = juntarItens((env.itens || []).map((x) => ({ cod: String(x.codigo), nome: x.nome, fora: !!x.custom, rec: env.id, q: x.q })));
   try { await RV.rpc("rec_carregar", { p_envio: +env.id }); } catch (e) { /* a lista já está no aparelho */ }
   aviso(novos + " " + plural(novos, "produto carregado", "produtos carregados") + ".");
   fq = ""; ir("/contar");
@@ -552,6 +577,29 @@ function adicionarColados() {
   bmodo = "marcados"; atualizarBusca();
 }
 
+/* ---- salvar (guarda aqui e no servidor as quantidades dos itens de ticket) ---- */
+async function salvarContagem(btn) {
+  if (!atual) return;
+  salvarAtual(); // neste aparelho
+  const its = atual.itens.filter((i) => i.rec).map((i) => ({ envio: i.rec, codigo: i.recCod, q: i.q }));
+  if (!its.length) { aviso("💾 Salvo neste aparelho."); return; }
+  if (btn) btn.disabled = true;
+  try { await RV.rpc("rec_salvar", { p_itens: its }); aviso("💾 Salvo (aparelho e servidor)."); }
+  catch (e) { aviso("💾 Salvo neste aparelho. Sem internet para salvar no servidor agora."); }
+  if (btn) btn.disabled = false;
+}
+// Ao abrir ou voltar para o app: o que outro conferente devolveu (com quantidades) entra na recontagem em andamento.
+async function sincronizarGeral() {
+  if (!window.RV || !RV.logado() || !atual || rota() === "/") return; // na tela inicial isso já é feito por carregarCtrl
+  const n = await sincronizarPendencias();
+  if (n > 0) {
+    aviso(n + " " + plural(n, "item voltou", "itens voltaram") + " para a sua recontagem, já com as quantidades.");
+    const a = document.activeElement;
+    if (!(a && a.classList && a.classList.contains("qi"))) render(); // não interrompe quem está digitando
+  }
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) sincronizarGeral(); });
+
 /* ---- dividir a lista com outro conferente ---- */
 let dSel = new Set(), dDest = [], dConf = [], dEnv = false;
 const meuMat = () => { try { return (RV.perfilCache() || {}).matricula || ""; } catch (e) { return ""; } };
@@ -572,9 +620,9 @@ function desenharDividir() {
   const its = atual.itens, nSel = dSel.size, k = dDest.length;
   const por = k && nSel ? Math.floor(nSel / k) : 0;
   m.querySelector(".dbox").innerHTML = `<h2>Dividir lista</h2>
-    <p class="sub" style="margin:0 0 8px">1. Marque os itens que vão para outro conferente. Itens de um ticket continuam no <b>mesmo ticket</b>.</p>
+    <p class="sub" style="margin:0 0 8px">1. Marque os itens que vão para outro conferente. Itens de um ticket continuam no <b>mesmo ticket</b>, e as quantidades já lançadas <b>vão junto</b>.</p>
     <div class="row" style="margin:4px 0"><button class="btn mini" data-d="todos" type="button">${nSel === its.length ? "Desmarcar todos" : "Marcar todos"}</button><span class="dcont">${nSel} de ${its.length}</span></div>
-    <div class="cx-itens dlista">${its.map((it) => { const c = codDoItem(it) || "—"; return `<label class="cx-it dli"><input type="checkbox" data-dsel="${esc(it.cod)}" ${dSel.has(it.cod) ? "checked" : ""}><span class="c">${esc(c)}</span><span class="n">${esc(it.nome)}${it.rec ? ` <small>(ticket ${tk(it.rec)})</small>` : ""}${temDigitado(it) ? " <small>(já tem quantidade)</small>" : ""}</span></label>`; }).join("")}</div>
+    <div class="cx-itens dlista">${its.map((it) => { const c = codDoItem(it) || "—"; return `<label class="cx-it dli"><input type="checkbox" data-dsel="${esc(it.cod)}" ${dSel.has(it.cod) ? "checked" : ""}><span class="c">${esc(c)}</span><span class="n">${esc(it.nome)}${it.rec ? ` <small>(ticket ${tk(it.rec)})</small>` : ""}${temDigitado(it) ? " <small>(com quantidade: vai junto)</small>" : ""}</span></label>`; }).join("")}</div>
     <p class="sub" style="margin:12px 0 8px">2. Para quem enviar?</p>
     ${dConf.length ? dConf.map((c) => `<label class="cx-d${dDest.includes(c.matricula) ? " on" : ""}"><input type="checkbox" data-ddest="${esc(c.matricula)}" ${dDest.includes(c.matricula) ? "checked" : ""}><b>${esc(c.nome)}</b></label>`).join("") : '<div class="empty">Não há outro conferente cadastrado.</div>'}
     ${k > 1 && nSel >= k ? `<div class="callout blue"><span class="ci">➗</span><p>${nSel} itens divididos em partes iguais entre ${k} conferentes (${por}${nSel % k ? " ou " + (por + 1) : ""} cada).</p></div>` : ""}
@@ -584,10 +632,8 @@ function desenharDividir() {
 async function enviarDividir() {
   const its = atual.itens.filter((i) => dSel.has(i.cod));
   if (!its.length || !dDest.length || dEnv) return;
-  const comQtd = its.filter(temDigitado).length;
-  if (comQtd && !confirm(comQtd + " " + plural(comQtd, "item já tem", "itens já têm") + " quantidade lançada. Ao enviar, as quantidades saem junto da sua lista. Continuar?")) return;
   dEnv = true; desenharDividir();
-  const itens = its.map((it, k) => ({ codigo: codDoItem(it) || ("SC" + (k + 1)), nome: it.nome, custom: !!it.custom, rec: it.rec || null }));
+  const itens = its.map((it, k) => ({ codigo: codDoItem(it) || ("SC" + (k + 1)), nome: it.nome, custom: !!it.custom, rec: it.rec || null, q: temDigitado(it) ? it.q : null }));
   let r;
   try { r = await RV.rpc("rec_compartilhar", { p_itens: itens, p_destinos: dDest }); }
   catch (e) { dEnv = false; desenharDividir(); const d = $("#dmsg"); if (d) { d.className = "callout red"; d.querySelector("p").textContent = "Não foi possível enviar: " + (e.message || "erro"); } return; }
@@ -673,9 +719,10 @@ function vContar() {
   if (n === 1) abertos.add(atual.itens[0].cod); // só um produto: já vem aberto
   let h = `<div class="ico">🧮</div><h1>Quantidades</h1>
     <p class="sub">Toque no produto para abrir e digitar <b>pallets</b>, <b>lastros</b>, <b>caixas</b> soltas e <b>unidades</b>. Para somar vários valores, use o <b>+</b>: <b>15+20+12</b>.</p>
-    <div class="row"><a class="btn" href="#/buscar">➕ Adicionar produto</a>${n ? '<button class="btn" data-a="dividir" type="button">↗️ Dividir</button>' : ""}</div>`;
+    <div class="row"><a class="btn" href="#/buscar">➕ Adicionar produto</a>${n ? '<button class="btn" data-a="dividir" type="button">↗️ Dividir</button><button class="btn" data-a="salvar" type="button">💾 Salvar</button>' : ""}</div>`;
   if (n >= 4) h += `<div class="fbar"><input id="fq" class="search" type="search" inputmode="search" autocomplete="off" placeholder="Pesquisar nos ${n} produtos…" value="${esc(fq)}"><div class="fmeta" id="fmeta"></div></div>`;
   h += n ? atual.itens.map(cartaoHtml).join("") : '<div class="empty">Nenhum produto marcado. Toque em “Adicionar produto”.</div>';
+  if (n) h += '<div class="row"><button class="btn" data-a="salvar" type="button">💾 Salvar</button><button class="btn" data-a="dividir" type="button">↗️ Dividir</button></div>';
   view.innerHTML = h;
   aplicarFiltro();
   atualizarBarraContar();
@@ -800,6 +847,7 @@ view.addEventListener("click", async (e) => {
   if (btn) {
     const a = btn.dataset.a;
     if (a === "dividir") { abrirDividir(); return; }
+    if (a === "salvar") { salvarContagem(btn); return; }
     if (a === "toggle") { alternarCartao(btn.closest(".pc"), true); return; }
     if (a === "xitem") {
       const i = +btn.closest(".pc").dataset.i;
@@ -889,6 +937,7 @@ view.addEventListener("keydown", (e) => {
 });
 
 render();
+sincronizarGeral();
 </script>
 </body>
 </html>

@@ -155,7 +155,7 @@ async function enviar() {
     const a = await RV.funcao(RV_CONFIG.FUNCAO_AVISO, { envio: r.envio });
     const ok = a.avisados || [], sem = a.semAparelho || [], erro = a.falhas || [];
     aviso = (ok.length ? `<br>🔔 Aviso no celular: ${ok.map(esc).join(", ")}.` : "") + (sem.length ? `<br>ℹ️ Sem avisos ativados (verão a bolinha no app): ${sem.map(esc).join(", ")}.` : "") + (erro.length ? `<br>⚠️ Falhou o aviso para: ${erro.map(esc).join(", ")}.` : "");
-  } catch (e) { aviso = "<br>ℹ️ O aviso no celular não saiu agora; eles verão a bolinha vermelha no app."; }
+  } catch (e) { const det = (e && e.dados && e.dados.detalhe) ? ": " + e.dados.detalhe : ""; aviso = "<br>ℹ️ O aviso no celular não saiu agora (" + esc((e && e.message || "erro") + det) + "); eles verão a bolinha vermelha no app."; }
   msg(`✅ <b>Recontagem enviada!</b> ${r.destinos.map((d) => `${esc(d.nome)} (${d.qtd})`).join(" · ")}${aviso}`, "green");
   $("#txt").value = ""; removidos.clear(); sel = []; enviando = false;
   ler(); carregarHist();

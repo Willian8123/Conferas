@@ -595,10 +595,10 @@ async function enviarDividir() {
   atual.itens = atual.itens.filter((i) => !fora.has(i.cod)); fora.forEach((c) => abertos.delete(c));
   salvarAtual();
   fecharDividir();
+  render(); // a lista já aparece sem os itens enviados; o aviso no celular sai em seguida
   let extra = "";
   try { const a = await RV.funcao(RV_CONFIG.FUNCAO_AVISO, {}); extra = (a.avisados || []).length ? " Aviso enviado no celular." : " (sem aviso no celular; verão o sininho)"; } catch (e) { extra = " (sem aviso no celular; verão o sininho)"; }
   aviso("Enviado: " + r.destinos.map((d) => d.nome.split(" ")[0] + " " + d.qtd).join(", ") + "." + extra);
-  render();
 }
 document.addEventListener("click", (e) => {
   const t = e.target;

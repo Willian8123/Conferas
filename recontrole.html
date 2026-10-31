@@ -68,7 +68,7 @@
   <div class="row"><button class="btn primary big" id="bEnviar" type="button" disabled>📤 Enviar recontagem</button></div>
   <div class="callout hidden" id="msg"><p></p></div>
 
-  <div class="sec">Enviadas recentemente <small>(somem em 7 dias)</small></div>
+  <div class="sec">Em andamento <small>(enviadas pelo Controle e compartilhadas · somem em 7 dias)</small></div>
   <div class="list" id="hist"><div class="empty">Carregando…</div></div>
 </div>
 <div class="toast hidden" id="toast"></div>
@@ -171,7 +171,7 @@ async function carregarHist() {
   try {
     const h = await RV.rpc("rec_historico");
     if (!vivo()) return;
-    $("#hist").innerHTML = h.length ? h.map((e) => `<div class="cx-h"><div class="top"><b>${e.total} ${plural(e.total, "item", "itens")}</b><span>${hora(e.criado_em)}${e.por ? " · " + esc(e.por) : ""}</span></div>
+    $("#hist").innerHTML = h.length ? h.map((e) => `<div class="cx-h"><div class="top"><b>${e.tipo === "compartilhada" ? "🤝 Compartilhada" : "📥 Do Controle"} · ${e.total} ${plural(e.total, "item", "itens")}</b><span>${hora(e.criado_em)}${e.por ? " · " + esc(e.por) : ""}</span></div>
       <ul class="cx-ul">${(e.destinos || []).map((d) => { const pend = d.qtd - (d.concluidos || 0); return `<li><span>${esc(d.nome)}: ${d.qtd} ${plural(d.qtd, "item", "itens")} — ${pend <= 0 ? '<span class="feito">concluiu ✓</span>' : d.concluidos ? `${d.concluidos}/${d.qtd} concluídos` : d.carregados ? "carregou, ainda contando" : "ainda não abriu"}</span>${pend > 0 ? `<button class="btn mini" type="button" data-rep="${e.id}|${esc(d.matricula)}|${esc(d.nome)}|${pend}">↪ Repassar ${pend}</button>` : ""}</li>`; }).join("")}</ul>
       <div class="row" style="margin:6px 0 0"><button class="btn mini danger" type="button" data-del="${e.id}">Apagar envio</button></div></div>`).join("") : '<div class="empty">Nada enviado nos últimos 7 dias.</div>';
   } catch (e) { if (vivo()) $("#hist").innerHTML = '<div class="empty">Não consegui carregar agora (' + esc(e.message || "erro") + ').</div>'; }
@@ -198,7 +198,7 @@ $("#dest").addEventListener("change", (e) => {
 $("#bEnviar").addEventListener("click", enviar);
 $("#hist").addEventListener("click", async (e) => {
   const b = e.target.closest("[data-del]"); if (!b) return;
-  if (!confirm("Apagar este envio? Os conferentes que ainda não carregaram deixam de ver a lista.")) return;
+  if (!confirm("Apagar esta lista? Os conferentes que ainda não concluíram deixam de ver a pendência.")) return;
   try { await RV.rpc("rec_apagar", { p_envio: +b.dataset.del }); toast("Envio apagado."); carregarHist(); } catch (er) { toast(er.message || "Não consegui apagar."); }
 });
 

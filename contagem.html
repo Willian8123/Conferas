@@ -383,33 +383,56 @@ function vInicio() {
   carregarCtrl();
 }
 
-/* ---- listas enviadas pelo Controle ---- */
+/* ---- listas enviadas pelo Controle / compartilhadas por colegas ---- */
+const FILA = "rec_conclusoes_v1";
+const codDoItem = (i) => (i.custom ? i.codUser : i.cod);
+// Quantos itens da lista pendente já estão na recontagem em andamento?
+function situacaoLista(env) {
+  const tem = new Set(((atual && atual.itens) || []).map(codDoItem));
+  const todos = env.itens || [], faltam = todos.filter((x) => !tem.has(String(x.codigo)));
+  return { n: todos.length, faltam: faltam.length };
+}
+// A pendência NÃO tem botão de fechar: só some quando a recontagem é concluída (ou o Controle apaga/repassa).
 async function carregarCtrl() {
   const box = $("#ctrlBox");
   if (!box || !window.RV || !RV.logado()) return;
+  await enviarConclusoes();
   let lista;
   try { lista = await RV.rpc("rec_minhas"); } catch (e) { return; }
   const box2 = $("#ctrlBox");
-  if (!box2 || !Array.isArray(lista) || !lista.length) return;
-  box2.innerHTML = lista.map((e) => {
-    const n = (e.itens || []).length;
-    return `<div class="callout blue"><span class="ci">📥</span><p><b>Recontagem do Controle</b><br>${n} ${plural(n, "produto", "produtos")}${e.de ? " · enviada por " + esc(e.de) : ""}${e.criado_em ? " · " + dataBR(e.criado_em) : ""}</p></div>
-      <div class="row"><button class="btn primary big" data-a="ctrl" data-e="${e.id}">📥 Carregar na recontagem</button></div>`;
-  }).join("");
+  if (!box2 || !Array.isArray(lista)) return;
   ctrlLista = lista;
+  box2.innerHTML = lista.map((e) => {
+    const sit = situacaoLista(e), comp = e.tipo === "compartilhada";
+    const titulo = comp ? "Lista compartilhada" : "Recontagem pendente do Controle";
+    return `<div class="callout blue"><span class="ci">${comp ? "🤝" : "📥"}</span><p><b>${titulo}</b><br>${sit.n} ${plural(sit.n, "produto", "produtos")} para contar${e.de ? " · enviada por " + esc(e.de) : ""}${e.criado_em ? " · " + dataBR(e.criado_em) : ""}<br><small>Só sai daqui quando você concluir a recontagem.</small></p></div>
+      <div class="row">${sit.faltam
+        ? `<button class="btn primary big" data-a="ctrl" data-e="${e.id}">📥 Carregar na recontagem${sit.faltam < sit.n ? " (faltam " + sit.faltam + ")" : ""}</button>`
+        : '<button class="btn primary big" data-a="continuar">▶️ Continuar recontagem</button>'}</div>`;
+  }).join("");
 }
 let ctrlLista = [];
-// Acrescenta produtos [{cod, nome, fora}] à recontagem em andamento (sem repetir). Devolve quantos entraram.
+// Conclusões ficam numa fila no aparelho até o servidor receber (funciona mesmo se cair a internet).
+async function enviarConclusoes(novas) {
+  let fila = ler(FILA, []);
+  if (novas && novas.length) fila = fila.concat(novas);
+  if (!fila.length) return;
+  gravar(FILA, fila);
+  try { await RV.rpc("rec_concluir", { p_itens: fila }); try { localStorage.removeItem(FILA); } catch (e) {} } catch (e) { /* tenta de novo na próxima vez */ }
+}
+// Acrescenta produtos [{cod, nome, fora, rec}] à recontagem em andamento (sem repetir). Devolve quantos entraram.
 function juntarItens(lista) {
   if (!atual) atual = { id: novoId(), inicio: new Date().toISOString(), itens: [], setor: "", contador: nomeLogin() };
-  const tem = new Set(atual.itens.map((i) => (i.custom ? i.codUser : i.cod)));
+  const porCod = new Map(atual.itens.map((i) => [codDoItem(i), i]));
   let novos = 0;
   lista.forEach((x) => {
-    if (tem.has(x.cod)) return;
-    tem.add(x.cod);
-    if (x.fora || !NOME.has(x.cod)) atual.itens.push({ cod: "X" + novoId(), nome: x.nome, custom: true, codUser: x.cod, q: qVazio() });
-    else atual.itens.push({ cod: x.cod, nome: NOME.get(x.cod), q: qVazio() });
-    novos++;
+    const ex = porCod.get(x.cod);
+    if (ex) { if (x.rec && !ex.rec) { ex.rec = x.rec; ex.recCod = x.cod; } return; }
+    const it = (x.fora || !NOME.has(x.cod))
+      ? { cod: "X" + novoId(), nome: x.nome, custom: true, codUser: x.cod, q: qVazio() }
+      : { cod: x.cod, nome: NOME.get(x.cod), q: qVazio() };
+    if (x.rec) { it.rec = x.rec; it.recCod = x.cod; }
+    atual.itens.push(it); porCod.set(x.cod, it); novos++;
   });
   salvarAtual();
   return novos;
@@ -417,10 +440,9 @@ function juntarItens(lista) {
 async function carregarDoControle(id) {
   const env = ctrlLista.find((x) => String(x.id) === String(id));
   if (!env) return;
-  const novos = juntarItens((env.itens || []).map((x) => ({ cod: String(x.codigo), nome: x.nome, fora: !!x.custom })));
-  salvarAtual();
-  try { await RV.rpc("rec_carregar", { p_envio: +env.id }); } catch (e) { /* a lista já está no aparelho; só o aviso de "carregou" não foi */ }
-  aviso(novos + " " + plural(novos, "produto carregado", "produtos carregados") + " do Controle.");
+  const novos = juntarItens((env.itens || []).map((x) => ({ cod: String(x.codigo), nome: x.nome, fora: !!x.custom, rec: env.id })));
+  try { await RV.rpc("rec_carregar", { p_envio: +env.id }); } catch (e) { /* a lista já está no aparelho */ }
+  aviso(novos + " " + plural(novos, "produto carregado", "produtos carregados") + ".");
   fq = ""; ir("/contar");
 }
 
@@ -431,6 +453,7 @@ function vBuscar() {
     <p class="sub">Pesquise e marque os produtos. Pode pesquisar quantos quiser: as marcações ficam guardadas.</p>
     <div class="pbox"><input id="bq" class="search" type="search" inputmode="search" autocomplete="off" placeholder="Ex.: 2538  ·  pilsen 600  ·  guarana 2l" style="width:100%" value="${esc(bq)}"></div>
     <div class="chips"><button class="chip" data-m="todos" type="button">Pesquisar</button><button class="chip" data-m="marcados" type="button"></button><button class="chip" data-m="colar" type="button">📋 Colar lista</button></div>
+    <div class="row"><button class="btn mini hidden" id="bdiv" data-a="dividir" type="button">↗️ Dividir com outro conferente</button></div>
     <div id="bcolar" class="hidden"></div>
     <div class="pmeta" id="bmeta"></div><div id="blista"></div>
     <button class="btn pmore hidden" id="bmais" type="button">Mostrar mais</button>
@@ -446,6 +469,7 @@ function atualizarChips() {
     if (c.dataset.m === "marcados") c.textContent = "Marcados (" + atual.itens.length + ")";
   });
   const n = atual.itens.length;
+  const bd = $("#bdiv"); if (bd) bd.classList.toggle("hidden", !n);
   barra("<b>" + n + "</b> " + plural(n, "marcado", "marcados"), "Avançar →", () => ir("/contar"), n === 0);
 }
 function atualizarBusca() {
@@ -527,6 +551,73 @@ function adicionarColados() {
   bmodo = "marcados"; atualizarBusca();
 }
 
+/* ---- dividir a lista com outro conferente ---- */
+let dSel = new Set(), dDest = [], dConf = [], dEnv = false;
+const meuMat = () => { try { return (RV.perfilCache() || {}).matricula || ""; } catch (e) { return ""; } };
+function fecharDividir() { const m = $("#dmod"); if (m) m.remove(); }
+async function abrirDividir() {
+  if (!atual || !atual.itens.length) return;
+  dSel = new Set(); dDest = []; dEnv = false;
+  const m = document.createElement("div"); m.id = "dmod"; m.className = "dmod";
+  m.innerHTML = '<div class="dbox"><div class="empty">Carregando conferentes…</div></div>';
+  document.body.appendChild(m);
+  m.addEventListener("click", (e) => { if (e.target === m) fecharDividir(); });
+  try { dConf = (await RV.rpc("rec_conferentes")).filter((c) => c.matricula !== meuMat()); }
+  catch (e) { m.querySelector(".dbox").innerHTML = `<h2>Dividir lista</h2><div class="callout yellow"><p>Não consegui carregar os conferentes (${esc(e.message || "erro")}). É preciso internet para dividir.</p></div><div class="row"><button class="btn" data-d="fechar" type="button">Fechar</button></div>`; return; }
+  desenharDividir();
+}
+function desenharDividir() {
+  const m = $("#dmod"); if (!m) return;
+  const its = atual.itens, nSel = dSel.size, k = dDest.length;
+  const por = k && nSel ? Math.floor(nSel / k) : 0;
+  m.querySelector(".dbox").innerHTML = `<h2>Dividir lista</h2>
+    <p class="sub" style="margin:0 0 8px">1. Marque os itens que vão para outro conferente.</p>
+    <div class="row" style="margin:4px 0"><button class="btn mini" data-d="todos" type="button">${nSel === its.length ? "Desmarcar todos" : "Marcar todos"}</button><span class="dcont">${nSel} de ${its.length}</span></div>
+    <div class="cx-itens dlista">${its.map((it) => { const c = codDoItem(it) || "—"; return `<label class="cx-it dli"><input type="checkbox" data-dsel="${esc(it.cod)}" ${dSel.has(it.cod) ? "checked" : ""}><span class="c">${esc(c)}</span><span class="n">${esc(it.nome)}${temDigitado(it) ? " <small>(já tem quantidade)</small>" : ""}</span></label>`; }).join("")}</div>
+    <p class="sub" style="margin:12px 0 8px">2. Para quem enviar?</p>
+    ${dConf.length ? dConf.map((c) => `<label class="cx-d${dDest.includes(c.matricula) ? " on" : ""}"><input type="checkbox" data-ddest="${esc(c.matricula)}" ${dDest.includes(c.matricula) ? "checked" : ""}><b>${esc(c.nome)}</b></label>`).join("") : '<div class="empty">Não há outro conferente cadastrado.</div>'}
+    ${k > 1 && nSel >= k ? `<div class="callout blue"><span class="ci">➗</span><p>${nSel} itens divididos em partes iguais entre ${k} conferentes (${por}${nSel % k ? " ou " + (por + 1) : ""} cada).</p></div>` : ""}
+    <div class="callout hidden" id="dmsg"><p></p></div>
+    <div class="row"><button class="btn primary big" data-d="enviar" type="button" ${nSel && k && nSel >= k && !dEnv ? "" : "disabled"}>${dEnv ? "Enviando…" : nSel && k ? `📤 Enviar ${nSel} ${plural(nSel, "item", "itens")}` : "📤 Enviar"}</button><button class="btn" data-d="fechar" type="button">Cancelar</button></div>`;
+}
+async function enviarDividir() {
+  const its = atual.itens.filter((i) => dSel.has(i.cod));
+  if (!its.length || !dDest.length || dEnv) return;
+  const comQtd = its.filter(temDigitado).length;
+  if (comQtd && !confirm(comQtd + " " + plural(comQtd, "item já tem", "itens já têm") + " quantidade lançada. Ao enviar, as quantidades saem junto da sua lista. Continuar?")) return;
+  dEnv = true; desenharDividir();
+  const itens = its.map((it, k) => ({ codigo: codDoItem(it) || ("SC" + (k + 1)), nome: it.nome, custom: !!it.custom, rec: it.rec || null }));
+  let r;
+  try { r = await RV.rpc("rec_compartilhar", { p_itens: itens, p_destinos: dDest }); }
+  catch (e) { dEnv = false; desenharDividir(); const d = $("#dmsg"); if (d) { d.className = "callout red"; d.querySelector("p").textContent = "Não foi possível enviar: " + (e.message || "erro"); } return; }
+  // sai da minha lista
+  const fora = new Set(its.map((i) => i.cod));
+  atual.itens = atual.itens.filter((i) => !fora.has(i.cod)); fora.forEach((c) => abertos.delete(c));
+  salvarAtual();
+  fecharDividir();
+  let extra = "";
+  try { const a = await RV.funcao(RV_CONFIG.FUNCAO_AVISO, {}); extra = (a.avisados || []).length ? " Aviso enviado no celular." : " (sem aviso no celular; verão o sininho)"; } catch (e) { extra = " (sem aviso no celular; verão o sininho)"; }
+  aviso("Enviado: " + r.destinos.map((d) => d.nome.split(" ")[0] + " " + d.qtd).join(", ") + "." + extra);
+  render();
+}
+document.addEventListener("click", (e) => {
+  const t = e.target;
+  const d = t.closest && t.closest("[data-d]");
+  if (d && $("#dmod") && $("#dmod").contains(d)) {
+    const a = d.dataset.d;
+    if (a === "fechar") fecharDividir();
+    else if (a === "todos") { dSel = dSel.size === atual.itens.length ? new Set() : new Set(atual.itens.map((i) => i.cod)); desenharDividir(); }
+    else if (a === "enviar") enviarDividir();
+    return;
+  }
+});
+document.addEventListener("change", (e) => {
+  const t = e.target;
+  if (!$("#dmod") || !$("#dmod").contains(t)) return;
+  if (t.dataset.dsel) { if (t.checked) dSel.add(t.dataset.dsel); else dSel.delete(t.dataset.dsel); desenharDividir(); }
+  else if (t.dataset.ddest) { dDest = t.checked ? dDest.concat(t.dataset.ddest) : dDest.filter((x) => x !== t.dataset.ddest); desenharDividir(); }
+});
+
 /* ================= tela: quantidades ================= */
 const EXEMPLO = { pallet: "Ex.: 15+20+12", lastro: "Ex.: 15+20+12", cx: "Ex.: 15+20+12", un: "Ex.: 24" };
 function campoHtml(it, t) {
@@ -581,7 +672,7 @@ function vContar() {
   if (n === 1) abertos.add(atual.itens[0].cod); // só um produto: já vem aberto
   let h = `<div class="ico">🧮</div><h1>Quantidades</h1>
     <p class="sub">Toque no produto para abrir e digitar <b>pallets</b>, <b>lastros</b>, <b>caixas</b> soltas e <b>unidades</b>. Para somar vários valores, use o <b>+</b>: <b>15+20+12</b>.</p>
-    <div class="row"><a class="btn" href="#/buscar">➕ Adicionar produto</a></div>`;
+    <div class="row"><a class="btn" href="#/buscar">➕ Adicionar produto</a>${n ? '<button class="btn" data-a="dividir" type="button">↗️ Dividir</button>' : ""}</div>`;
   if (n >= 4) h += `<div class="fbar"><input id="fq" class="search" type="search" inputmode="search" autocomplete="off" placeholder="Pesquisar nos ${n} produtos…" value="${esc(fq)}"><div class="fmeta" id="fmeta"></div></div>`;
   h += n ? atual.itens.map(cartaoHtml).join("") : '<div class="empty">Nenhum produto marcado. Toque em “Adicionar produto”.</div>';
   view.innerHTML = h;
@@ -707,6 +798,7 @@ view.addEventListener("click", async (e) => {
   const btn = t.closest("[data-a]");
   if (btn) {
     const a = btn.dataset.a;
+    if (a === "dividir") { abrirDividir(); return; }
     if (a === "toggle") { alternarCartao(btn.closest(".pc"), true); return; }
     if (a === "xitem") {
       const i = +btn.closest(".pc").dataset.i;
@@ -759,8 +851,10 @@ view.addEventListener("click", async (e) => {
     hist.unshift(r);
     hist = hist.slice(0, 30);
     gravar(K.hist, hist);
+    const concl = atual.itens.filter((i) => i.rec).map((i) => ({ envio: i.rec, codigo: i.recCod }));
     atual = null;
     try { localStorage.removeItem(K.atual); } catch (er) {}
+    if (concl.length) await enviarConclusoes(concl);
     aviso("Recontagem concluída e guardada no histórico.");
     ir("/");
   }

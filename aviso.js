@@ -1,7 +1,7 @@
 // Avisos de recontagem para o conferente: bolinha vermelha, bipe e notificação push (Android).
 // Usa rv-config.js e rv.js. Elementos com [data-rec-badge] mostram a quantidade de itens esperando.
 (function () {
-  const VISTO = "rec_visto_v1", CONT = "rec_cont_v1", EP = "push_ep_v1";
+  const VISTO = "rec_visto_v2", CONT = "rec_cont_v2", EP = "push_ep_v1";
   const lerLS = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const gravarLS = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
   const perfil = () => { try { return RV.logado() ? RV.perfilCache() : null; } catch (e) { return null; } };
@@ -14,6 +14,16 @@
       el.textContent = n > 99 ? "99+" : String(n);
       el.classList.toggle("hidden", !n);
     });
+  }
+  function pintarSino(n) {
+    document.querySelectorAll("[data-sino-badge]").forEach((el) => {
+      el.textContent = n > 9 ? "9+" : String(n);
+      el.classList.toggle("hidden", !n);
+    });
+  }
+  // repinta com o último número guardado (a tela inicial se redesenha várias vezes)
+  function repintar() {
+    try { const c = JSON.parse(lerLS(CONT) || "null"); if (c) { pintarSino(c.nao_lidas || 0); if (ehConferente()) pintar(c.pend || 0); } } catch (e) {}
   }
   function bipe() {
     try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
@@ -30,21 +40,22 @@
     } catch (e) {}
   }
   async function checar() {
-    if (!ehConferente()) return null;
+    if (!perfil()) return null;
     let r;
-    try { r = await RV.rpc("rec_contar"); } catch (e) { return null; }
+    try { r = await RV.rpc("notif_contar"); } catch (e) { return null; }
     if (!r) return null;
     gravarLS(CONT, JSON.stringify(r));
-    pintar(r.itens || 0);
-    // som só quando chega lista nova com o app já aberto
-    if (!primeira && r.itens > 0 && r.ultimo > ultimoVisto) { bipe(); window.dispatchEvent(new CustomEvent("rec-nova", { detail: r })); }
+    pintarSino(r.nao_lidas || 0);
+    if (ehConferente()) pintar(r.pend || 0);
+    // som só quando chega notificação nova com o app já aberto
+    if (!primeira && r.nao_lidas > 0 && r.ultimo > ultimoVisto) { bipe(); window.dispatchEvent(new CustomEvent("rec-nova", { detail: r })); }
     if (r.ultimo > ultimoVisto) { ultimoVisto = r.ultimo; gravarLS(VISTO, String(ultimoVisto)); }
     primeira = false;
     return r;
   }
   function iniciar() {
-    if (!ehConferente()) return;
-    try { const c = JSON.parse(lerLS(CONT) || "null"); if (c) pintar(c.itens || 0); } catch (e) {}
+    if (!perfil()) return;
+    repintar();
     checar().then(() => sincronizarPush());
     clearInterval(timer);
     timer = setInterval(() => { if (!document.hidden) checar(); }, 45000);
@@ -95,7 +106,7 @@
   // Já tem permissão: só garante que o endereço deste aparelho está salvo para esta pessoa.
   async function sincronizarPush() {
     try {
-      if (!suportado() || Notification.permission !== "granted" || !ehConferente()) return;
+      if (!suportado() || Notification.permission !== "granted" || !perfil()) return;
       const reg = await registro(); if (!reg) return;
       await navigator.serviceWorker.ready;
       let sub = await reg.pushManager.getSubscription();
@@ -107,14 +118,14 @@
   const esc = (t) => String(t == null ? "" : t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   // Cartão "Ativar avisos" (aparece dentro de um elemento).
   async function cartao(el) {
-    if (!el || !ehConferente()) return;
+    if (!el || !perfil()) return;
     const e = await estado();
     let h = "";
     if (e === "ativo") h = '<div class="callout green"><span class="ci">🔔</span><p><b>Avisos ativados</b> neste aparelho.<br><button class="btn mini" data-av="off" type="button" style="margin-top:6px">Desativar</button></p></div>';
     else if (e === "negado") h = '<div class="callout yellow"><span class="ci">🔕</span><p>Os avisos estão <b>bloqueados</b> neste navegador. Para receber, libere as notificações deste site nas configurações do navegador.</p></div>';
     else if (e === "iphone-instalar") h = '<div class="callout yellow"><span class="ci">🔔</span><p>No iPhone, os avisos só funcionam com o app <b>adicionado à tela inicial</b> (Compartilhar → Adicionar à Tela de Início). Abra por lá e ative.</p></div>';
     else if (e === "nao-suportado") h = "";
-    else h = '<div class="callout blue"><span class="ci">🔔</span><p><b>Receba um aviso quando o Controle mandar uma recontagem.</b><br><button class="btn primary" data-av="on" type="button" style="margin-top:8px">🔔 Ativar avisos</button><span class="avmsg" style="display:block;font-size:13px;margin-top:6px"></span></p></div>';
+    else h = '<div class="callout blue"><span class="ci">🔔</span><p><b>Receba avisos no celular</b> do Feed e das recontagens, mesmo com o app fechado.<br><button class="btn primary" data-av="on" type="button" style="margin-top:8px">🔔 Ativar avisos</button><span class="avmsg" style="display:block;font-size:13px;margin-top:6px"></span></p></div>';
     el.innerHTML = h;
     const on = el.querySelector('[data-av="on"]'), off = el.querySelector('[data-av="off"]');
     if (on) on.addEventListener("click", async () => {
@@ -124,6 +135,6 @@
     if (off) off.addEventListener("click", async () => { off.disabled = true; await desativar(); cartao(el); });
   }
 
-  window.Aviso = { checar, pintar, bipe, estado, ativar, desativar, cartao, sincronizarPush, marcarVisto: (u) => { if (u > ultimoVisto) { ultimoVisto = u; gravarLS(VISTO, String(u)); } } };
+  window.Aviso = { checar, pintar, pintarSino, repintar, bipe, estado, ativar, desativar, cartao, sincronizarPush, marcarVisto: (u) => { if (u > ultimoVisto) { ultimoVisto = u; gravarLS(VISTO, String(u)); } } };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar); else iniciar();
 })();

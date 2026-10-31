@@ -80,7 +80,7 @@
     const p = RV.logado() ? RV.perfilCache() : null;
     if (p) {
       const img = Foto.minha();
-      $("quem").innerHTML = '<span class="qn"><button class="avbtn" id="bFoto" type="button" aria-label="Minha foto">' + Foto.avatar(p.nome, img) + (img ? "" : '<span class="cam" aria-hidden="true">📷</span>') + '</button><span>Olá, <b>' + esc(p.nome.trim().split(/\s+/)[0]) + '</b></span></span><span class="qbt"><button class="btn mini" id="bSenha" type="button">🔑 Senha</button> <button class="btn mini" id="bSair" type="button">Sair</button></span>';
+      $("quem").innerHTML = '<span class="qn"><button class="avbtn" id="bFoto" type="button" aria-label="Minha foto">' + Foto.avatar(p.nome, img) + (img ? "" : '<span class="cam" aria-hidden="true">📷</span>') + '</button><span>Olá, <b>' + esc(p.nome.trim().split(/\s+/)[0]) + '</b></span></span><span class="qbt"><a class="btn mini sino" href="notificacoes.html" aria-label="Notificações">🔔<span class="dotnovo hidden" data-sino-badge></span></a> <button class="btn mini" id="bSenha" type="button">🔑 Senha</button> <button class="btn mini" id="bSair" type="button">Sair</button></span>';
       $("bSenha").addEventListener("click", () => Conta.abrirSenha());
       $("bFoto").addEventListener("click", () => Foto.abrir(desenhar));
       $("bSair").addEventListener("click", async () => { await RV.sair(); location.replace("entrar.html"); });
@@ -95,7 +95,7 @@
     });
     $("semNada").classList.toggle("hidden", !(p && portas.filter((a) => a.id !== "portaFeed").every((a) => a.style.display === "none")));
     $("admLink").style.display = p && p.admin ? "block" : "none";
-    if (window.Aviso && p) Aviso.cartao($("avisoCard"));
+    if (window.Aviso && p) { Aviso.cartao($("avisoCard")); Aviso.repintar(); }
   }
   desenhar();
   // atualiza o perfil em segundo plano (os acessos podem ter mudado)

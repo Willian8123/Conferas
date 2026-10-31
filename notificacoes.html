@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#37352f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Embu Excelente">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Notificações</title>
+<link rel="stylesheet" href="ocorr.css">
+<link rel="stylesheet" href="paginas.css">
+<style>
+.nt{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin:0 0 8px;background:var(--bg);color:var(--text);font:inherit;cursor:pointer}
+.nt.nova{border-color:var(--accent);background:var(--blue)}
+.nt .e{font-size:22px;line-height:1.3}
+.nt .b{flex:1;min-width:0}
+.nt .b b{display:block;font-size:15px}
+.nt .b span{display:block;font-size:14px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere}
+.nt .b small{display:block;font-size:12px;color:var(--muted);margin-top:4px}
+.nt .go{color:var(--muted);align-self:center;font-size:20px}
+.nt .pt{width:9px;height:9px;border-radius:50%;background:#d93025;flex:none;margin-top:8px}
+</style>
+<script src="rv-config.js"></script><script src="rv.js"></script><script src="acesso.js" data-exigir=""></script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Início</a>
+  <div class="ico">🔔</div>
+  <h1>Notificações</h1>
+  <p class="sub">Ficam guardadas por 7 dias. Toque para ir ao lugar certo.</p>
+  <div class="callout hidden" id="msg"><span class="ci">ℹ️</span><p></p></div>
+  <div id="lista"><div class="empty">Carregando…</div></div>
+</div>
+<script src="util.js"></script>
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const esc = (t) => String(t == null ? "" : t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ICONE = { feed: "📣", controle: "📥", compartilhada: "🤝", repasse: "📥", retirada: "↩️" };
+let itens = [];
+function quando(iso) {
+  const d = new Date(iso), agora = new Date(), p = (n) => String(n).padStart(2, "0");
+  const hora = p(d.getHours()) + ":" + p(d.getMinutes());
+  if (d.toDateString() === agora.toDateString()) return "hoje " + hora;
+  const ont = new Date(agora); ont.setDate(ont.getDate() - 1);
+  if (d.toDateString() === ont.toDateString()) return "ontem " + hora;
+  return p(d.getDate()) + "/" + p(d.getMonth() + 1) + " " + hora;
+}
+function msg(t, cor) { const m = $("#msg"); m.className = "callout" + (cor ? " " + cor : ""); m.querySelector("p").textContent = t; window.scrollTo({ top: 0, behavior: "smooth" }); }
+function desenhar() {
+  $("#lista").innerHTML = itens.length ? itens.map((n) => `<button class="nt${n.lida ? "" : " nova"}" type="button" data-id="${n.id}">
+      <span class="e">${ICONE[n.tipo] || "🔔"}</span>
+      <span class="b"><b>${esc(n.titulo)}</b><span>${esc(n.corpo)}</span><small>${quando(n.criado_em)}</small></span>
+      ${n.lida ? "" : '<span class="pt" aria-label="Nova"></span>'}<span class="go">›</span></button>`).join("")
+    : '<div class="empty">Nenhuma notificação por enquanto.</div>';
+}
+// Leva ao lugar certo. Para listas, antes confere se ainda há o que contar.
+async function abrir(n) {
+  if (n.tipo === "feed") { location.href = "feed.html"; return; }
+  if (n.tipo === "retirada") { msg("Essa lista foi retirada de você pelo Controle e passou para outro conferente.", "yellow"); return; }
+  let st;
+  try { st = await RV.rpc("rec_status", { p_envio: +n.ref }); }
+  catch (e) { msg("Não consegui conferir agora (" + (e.message || "erro") + "). Tente de novo.", "yellow"); return; }
+  if (!st.existe) { msg("Essa lista não está mais com você: foi apagada ou repassada pelo Controle.", "yellow"); return; }
+  if (!st.pendentes) { msg("A contagem dessa lista já foi finalizada. ✅", "green"); return; }
+  location.href = "contagem.html";
+}
+$("#lista").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-id]"); if (!b) return;
+  const n = itens.find((x) => String(x.id) === b.dataset.id); if (n) abrir(n);
+});
+(async function () {
+  try { itens = await RV.rpc("notif_listar"); } catch (e) { $("#lista").innerHTML = '<div class="empty">Não consegui carregar agora (' + esc(e.message || "erro") + ').</div>'; return; }
+  desenhar();
+  // vindo do aviso no celular: abre direto a notificação tocada
+  const alvo = new URLSearchParams(location.search).get("abrir");
+  try { await RV.rpc("notif_marcar_lidas"); } catch (e) {}
+  try { localStorage.setItem("rec_cont_v2", JSON.stringify(Object.assign(JSON.parse(localStorage.getItem("rec_cont_v2") || "{}"), { nao_lidas: 0 }))); } catch (e) {}
+  if (alvo) { const n = itens.find((x) => String(x.id) === alvo); if (n) abrir(n); }
+})();
+</script>
+</body>
+</html>

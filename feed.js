@@ -290,6 +290,7 @@
       $("nPub").disabled = true;
       try {
         await chamar("feed_postar", { p_texto: txt, p_imagem: imgNova, p_opcoes: opc });
+        try { RV.funcao(RV_CONFIG.FUNCAO_AVISO, {}).catch(() => {}); } catch (e) {} // aviso no celular de quem ativou (não trava a publicação)
         $("fNovo").classList.add("hidden"); limparForm(); await carregar(true);
         window.scrollTo({ top: 0, behavior: "smooth" });
       } catch (er) { aviso("nErro", er.rede ? "Sem conexão. Tente de novo." : erroTxt(er)); }

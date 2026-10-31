@@ -136,3 +136,15 @@
 .cx-it .n{flex:1;min-width:0;overflow-wrap:anywhere}
 .cx-it.fora{background:var(--yellow);color:var(--yellow-t)}
 .cx-it button{border:0;background:transparent;color:var(--muted);font-size:18px;padding:4px 8px;cursor:pointer;border-radius:8px}
+
+.dmod{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:60;display:flex;align-items:flex-end;justify-content:center}
+.dbox{background:var(--bg);color:var(--text);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+.dbox h2{margin:0 0 6px;font-size:20px}
+.dlista{max-height:240px}
+.dli{cursor:pointer}
+.dli input,.cx-d input{width:20px;height:20px;flex:none}
+.dcont{margin-left:auto;font-size:13px;color:var(--muted)}
+.cx-d{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;cursor:pointer;background:var(--bg);margin:0 0 8px}
+.cx-d.on{border-color:var(--accent);background:var(--blue)}
+.cx-d b{flex:1}
+.callout.red{background:#fbe4e2;color:#5c1a14}

@@ -259,7 +259,9 @@ async function gerarPdf(r) {
     }
   } catch (e) { /* sem logo: segue só com o título */ }
   const tit = "Recontagem", tw = fb.widthOfTextAtSize(tit, 22);
-  page.drawText(tit, { x: (W - tw) / 2, y: y - LOGO_H / 2 - 8, size: 22, font: fb });
+  const capH = 22 * 0.72; // altura das maiúsculas
+  const ncen = LOGO_H * 0.77; // o nome "ambev" fica na parte de baixo da imagem da logo
+  page.drawText(tit, { x: (W - tw) / 2, y: y - ncen - capH / 2, size: 22, font: fb }); // centro da página, na altura do nome ambev
   y -= LOGO_H + 16;
   const info = [["Data", dataBR(r.fim)]];
   if (r.contador) info.push(["Contado por", r.contador]);

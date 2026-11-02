@@ -432,12 +432,38 @@ async function carregarCtrl() {
   if (!box2) return;
   box2.innerHTML = ctrlLista.map((e) => {
     const sit = situacaoLista(e), comp = e.tipo === "compartilhada";
-    const titulo = "Ticket " + tk(e.id) + " · " + (comp ? "lista compartilhada" : "recontagem do Controle");
+    if (e.tipo === "propria" && !sit.faltam) return ""; // minha própria recontagem já está carregada: o cartão de continuar já aparece
+    const titulo = "Ticket " + tk(e.id) + " · " + (comp ? "lista compartilhada" : e.tipo === "propria" ? "sua recontagem" : "recontagem do Controle");
     return `<div class="callout blue"><span class="ci">${comp ? "🤝" : "📥"}</span><p><b>${titulo}</b><br>${sit.n} ${plural(sit.n, "produto", "produtos")} com você${e.de ? " · enviada por " + esc(e.de) : ""}${e.criado_em ? " · " + dataBR(e.criado_em) : ""}<br><small>Só sai daqui quando você concluir a recontagem.</small></p></div>
       <div class="row">${sit.faltam
         ? `<button class="btn primary big" data-a="ctrl" data-e="${e.id}">📥 Carregar na recontagem${sit.faltam < sit.n ? " (faltam " + sit.faltam + ")" : ""}</button>`
         : '<button class="btn primary big" data-a="continuar">▶️ Continuar recontagem</button>'}</div>`;
   }).join("");
+}
+let regP = null;
+// Toda recontagem do conferente também fica registrada no servidor (ticket), para o Controle acompanhar.
+function registrarNoServidor() {
+  if (regP || !atual || !window.RV || !RV.logado()) return;
+  const novos = atual.itens.filter((i) => !i.rec && codDoItem(i));
+  if (!novos.length) return;
+  const eu = atual;
+  regP = (async () => {
+    try {
+      const r = await RV.rpc("rec_registrar", { p_envio: eu.env || null, p_itens: novos.map((i) => ({ codigo: codDoItem(i), nome: i.nome, custom: !!i.custom, q: temDigitado(i) ? i.q : null })) });
+      if (r && r.envio && atual === eu) {
+        eu.env = r.envio;
+        novos.forEach((i) => { if (!i.rec && atual.itens.includes(i)) { i.rec = r.envio; i.recCod = codDoItem(i); } });
+        salvarAtual();
+      }
+    } catch (e) { /* sem rede: tenta de novo na próxima vez */ }
+  })();
+  regP.then(() => { regP = null; }, () => { regP = null; });
+}
+// Tirou itens ou descartou: some do servidor o que era só dele (não mexe em tickets do Controle).
+function desistirNoServidor(itens) {
+  const por = new Map();
+  itens.filter((i) => i.rec).forEach((i) => { const k = String(i.rec); (por.get(k) || por.set(k, []).get(k)).push(i.recCod); });
+  por.forEach((cods, env) => { RV.rpc("rec_desistir", { p_envio: +env, p_codigos: cods }).catch(() => {}); });
 }
 let ctrlLista = [];
 // Conclusões ficam numa fila no aparelho até o servidor receber (funciona mesmo se cair a internet).
@@ -532,7 +558,7 @@ function alternar(cod) {
   if (idx >= 0) {
     const it = atual.itens[idx];
     if (temDigitado(it) && !confirm("Remover " + it.nome + " e as quantidades já lançadas?")) return false;
-    atual.itens.splice(idx, 1);
+    desistirNoServidor([it]); atual.itens.splice(idx, 1);
   } else atual.itens.push({ cod, nome: NOME.get(cod) || cod, q: qVazio() });
   salvarAtual();
   return true;
@@ -746,6 +772,7 @@ function alternarCartao(card, focar) {
 }
 function vContar() {
   const n = atual.itens.length;
+  registrarNoServidor();
   if (n === 1) abertos.add(atual.itens[0].cod); // só um produto: já vem aberto
   let h = `<div class="ico">🧮</div><h1>Quantidades</h1>
     <p class="sub">Toque no produto para abrir e digitar <b>pallets</b>, <b>lastros</b>, <b>caixas</b> soltas e <b>unidades</b>. Para somar vários valores, use o <b>+</b>: <b>15+20+12</b>.</p>
@@ -883,7 +910,7 @@ view.addEventListener("click", async (e) => {
       const i = +btn.closest(".pc").dataset.i;
       const it = atual.itens[i];
       if (temDigitado(it) && !confirm("Remover " + it.nome + " e as quantidades lançadas?")) return;
-      abertos.delete(it.cod); atual.itens.splice(i, 1); salvarAtual(); vContar();
+      desistirNoServidor([it]); abertos.delete(it.cod); atual.itens.splice(i, 1); salvarAtual(); vContar();
     } else if (a === "nova") { fq = "";
       atual = { id: novoId(), inicio: new Date().toISOString(), itens: [], setor: "", contador: nomeLogin() };
       salvarAtual(); bq = ""; bmodo = "todos"; ir("/buscar");
@@ -891,6 +918,7 @@ view.addEventListener("click", async (e) => {
     else if (a === "continuar") ir("/contar");
     else if (a === "descartar") {
       if (confirm("Descartar a recontagem em andamento? As quantidades lançadas serão perdidas.")) {
+        desistirNoServidor(atual.itens);
         atual = null;
         try { localStorage.removeItem(K.atual); } catch (er) {}
         vInicio();

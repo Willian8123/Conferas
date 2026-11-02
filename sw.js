@@ -1,6 +1,6 @@
 // Service worker: deixa o app funcionar offline.
 // Ao alterar qualquer arquivo, aumente a versão abaixo para o celular atualizar.
-const VERSION = "rotinas-v31";
+const VERSION = "rotinas-v32";
 const FILES = [
   "./",
   "./index.html",
@@ -39,7 +39,7 @@ const FILES = [
   "./rv-planilha.js",
   "./icon-192.png", "./apple-touch-icon.png", "./foto.js", "./conta.js", "./login.css", "./feed.html", "./feed.js", "./feed.css",
   "./recontrole.html", "./recparser.js", "./aviso.js", "./notificacoes.html",
-  "./icon-512.png",
+  "./badge-96.png", "./icon-512.png",
   "./icon-maskable-512.png"
 ];
 
@@ -81,7 +81,7 @@ self.addEventListener("push", (e) => {
   e.waitUntil(self.registration.showNotification(titulo, {
     body: d.corpo || "Você tem uma nova recontagem.",
     icon: "./icon-192.png",
-    badge: "./icon-192.png",
+    badge: "./badge-96.png",
     tag: d.tag || "recontagem",
     renotify: true,
     vibrate: [250, 120, 250],

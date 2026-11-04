@@ -26,6 +26,7 @@
       <button class="tab on" data-t="func">👥 Pessoas e acessos</button>
       <button class="tab" data-t="imp">📥 Importar planilha</button>
       <button class="tab" data-t="cfg">🎛️ Painel</button>
+      <button class="tab" data-t="af">📨 Alerta Fábrica</button>
       <button class="tab" data-t="ver">👁️ Ver como funcionário</button>
     </div>
 
@@ -48,10 +49,10 @@
           <div class="acs" id="nAcs">
             <label class="chk"><input type="checkbox" value="lobinho" checked> 🐺 Lobinho (ver a própria RV)</label>
             <label class="chk"><input type="checkbox" value="conferente"> 📋 Conferente</label>
-            <label class="chk"><input type="checkbox" value="ocorrencias"> 📨 Ocorrências</label>
+            <label class="chk"><input type="checkbox" value="ocorrencias"> 📨 Alerta Fábrica</label>
             <label class="chk"><input type="checkbox" value="controle"> 🎯 Controle (envia recontagem)</label>
           </div>
-          <span class="hint">Ao digitar o cargo, eu sugiro: Conferente → Conferente + Ocorrências · Empilhadeira → Ocorrências + Lobinho · Armazém → Lobinho. Você pode mudar.</span></div>
+          <span class="hint">Ao digitar o cargo, eu sugiro: Conferente → Conferente + Alerta Fábrica · Empilhadeira → Alerta Fábrica + Lobinho · Armazém → Lobinho. Você pode mudar.</span></div>
         <label class="chk"><input type="checkbox" id="nAdmin"> Também é administrador</label>
         <div class="row"><button class="btn" type="button" id="btnGerar">🎲 Gerar senha</button><button class="btn primary" type="submit">Criar funcionário</button></div>
       </form>
@@ -59,7 +60,7 @@
 
       <div class="sec">Cadastrados <small id="totFunc"></small></div>
       <div class="field" style="margin-bottom:8px"><label for="fFiltro">Mostrar</label>
-        <select id="fFiltro"><option value="">Todos</option><option value="lobinho">Com Lobinho</option><option value="conferente">Com Conferente</option><option value="ocorrencias">Com Ocorrências</option><option value="controle">Com Controle</option><option value="nenhum">Sem nenhum acesso</option><option value="admin">Administradores</option></select></div>
+        <select id="fFiltro"><option value="">Todos</option><option value="lobinho">Com Lobinho</option><option value="conferente">Com Conferente</option><option value="ocorrencias">Com Alerta Fábrica</option><option value="controle">Com Controle</option><option value="nenhum">Sem nenhum acesso</option><option value="admin">Administradores</option></select></div>
       <div class="list" id="listaFunc"></div>
       <div class="callout hidden" id="msgFunc"><p id="msgFuncTxt"></p></div>
     </div>
@@ -104,6 +105,21 @@
     </div>
 
     <!-- VER COMO -->
+    <div id="t-af" class="hidden">
+      <div class="sec">E-mails em cópia (Cc)</div>
+      <p class="sub">Esses endereços vão em cópia em todo e-mail do Alerta Fábrica (até 6). Deixe em branco o que não usar.</p>
+      <div class="field"><label for="cc1">Cc 1</label><input id="cc1" type="email" inputmode="email" autocapitalize="none" autocomplete="off"></div>
+      <div class="field" style="margin-top:8px"><label for="cc2">Cc 2</label><input id="cc2" type="email" inputmode="email" autocapitalize="none" autocomplete="off"></div>
+      <div class="field" style="margin-top:8px"><label for="cc3">Cc 3</label><input id="cc3" type="email" inputmode="email" autocapitalize="none" autocomplete="off"></div>
+      <details style="margin-top:8px"><summary>Mais 3 endereços</summary>
+        <div class="field" style="margin-top:8px"><label for="cc4">Cc 4</label><input id="cc4" type="email" autocapitalize="none" autocomplete="off"></div>
+        <div class="field" style="margin-top:8px"><label for="cc5">Cc 5</label><input id="cc5" type="email" autocapitalize="none" autocomplete="off"></div>
+        <div class="field" style="margin-top:8px"><label for="cc6">Cc 6</label><input id="cc6" type="email" autocapitalize="none" autocomplete="off"></div>
+      </details>
+      <div class="row"><button class="btn primary" type="button" id="btnSalvarCc">Salvar e-mails em cópia</button></div>
+      <div class="callout hidden" id="msgCc"><p id="msgCcTxt"></p></div>
+    </div>
+
     <div id="t-ver" class="hidden">
       <div class="sec">Ver o painel de um funcionário</div>
       <div class="field"><label for="selVer">Funcionário</label><select id="selVer"></select></div>
@@ -169,15 +185,16 @@
   $("tabs").addEventListener("click", (e) => {
     const b = e.target.closest(".tab"); if (!b) return;
     document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === b));
-    ["func", "imp", "cfg", "ver"].forEach((t) => $("t-" + t).classList.toggle("hidden", t !== b.dataset.t));
+    ["func", "imp", "cfg", "af", "ver"].forEach((t) => $("t-" + t).classList.toggle("hidden", t !== b.dataset.t));
     if (b.dataset.t === "ver") prepararVer();
+    if (b.dataset.t === "af") carregarCc();
     if (b.dataset.t === "cfg") carregarColunas().then(desenharCfg);
   });
 
   // ---------- acessos (qualquer combinação) ----------
   const ACESSOS = ["lobinho", "conferente", "ocorrencias", "controle"];
-  const NOME_AC = { lobinho: "Lobinho", conferente: "Conferente", ocorrencias: "Ocorrências", controle: "Controle" };
-  const ROTULO_AC = { lobinho: "🐺 Lobinho (ver a própria RV)", conferente: "📋 Conferente", ocorrencias: "📨 Ocorrências", controle: "🎯 Controle (envia recontagem)" };
+  const NOME_AC = { lobinho: "Lobinho", conferente: "Conferente", ocorrencias: "Alerta Fábrica", controle: "Controle" };
+  const ROTULO_AC = { lobinho: "🐺 Lobinho (ver a própria RV)", conferente: "📋 Conferente", ocorrencias: "📨 Alerta Fábrica", controle: "🎯 Controle (envia recontagem)" };
   const TAG_AC = { lobinho: "t-retorno", conferente: "t-carreg", ocorrencias: "t-puxada", controle: "t-controle" };
   const acessosPorCargo = (c) => /controle/i.test(c || "") ? ["controle", "ocorrencias", "lobinho"] : /conferente/i.test(c || "") ? ["conferente", "ocorrencias"] : /empilhadeira/i.test(c || "") ? ["ocorrencias", "lobinho"] : ["lobinho"];
   const marcados = (id) => Array.from($(id).querySelectorAll("input[type=checkbox]")).filter((c) => c.checked).map((c) => c.value);
@@ -424,6 +441,19 @@
       await RV.api("/rest/v1/rv_config?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: { id: 1, config: n, atualizado_em: new Date().toISOString() } });
       cfg = n; aviso("msgCfg", "Configuração salva. Confira na aba “Ver como funcionário”.", "green");
     } catch (e) { aviso("msgCfg", e.message); }
+  });
+
+  // ---------- Alerta Fábrica: e-mails em cópia ----------
+  async function carregarCc() {
+    try { const l = await RV.rpc("alerta_cc_ler", {}); for (let i = 1; i <= 6; i++) $("cc" + i).value = (l || [])[i - 1] || ""; }
+    catch (e) { aviso("msgCc", e.message); }
+  }
+  $("btnSalvarCc").addEventListener("click", async () => {
+    const l = []; let ruim = null;
+    for (let i = 1; i <= 6; i++) { const v = $("cc" + i).value.trim().toLowerCase(); if (!v) continue; if (!/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(v)) ruim = v; else if (!l.includes(v)) l.push(v); }
+    if (ruim) return aviso("msgCc", "E-mail inválido: " + ruim);
+    try { await RV.rpc("alerta_cc_salvar", { p_cc: l }); aviso("msgCc", l.length ? "Salvo. Cópia para: " + l.join(", ") + "." : "Salvo. Nenhum e-mail em cópia.", "green"); }
+    catch (e) { aviso("msgCc", e.message); }
   });
 
   // ---------- ver como ----------

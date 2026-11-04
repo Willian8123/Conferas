@@ -1,4 +1,4 @@
-// Funções compartilhadas das páginas de ocorrência.
+// Funções compartilhadas das páginas do Alerta Fábrica.
 (function () {
   const KEY = "ocorr_fabricas_v1";
   const RE = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
@@ -30,5 +30,22 @@
     const list = String(str || "").split(/[;,\s]+/).filter(Boolean);
     return { list, ok: list.length > 0 && list.every((e) => RE.test(e)) };
   }
-  window.Ocorr = { load, save, esc, parseEmails };
+
+  // ---------- fábricas no servidor (valem para todos) ----------
+  const CACHE = "alerta_fab_cache_v1";
+  const lerCache = () => { try { const a = JSON.parse(localStorage.getItem(CACHE) || "[]"); return Array.isArray(a) ? a : []; } catch (e) { return []; } };
+  // Devolve { lista: [{id, nome, emails[]}], offline }. Sem internet usa a última cópia.
+  async function fabricas() {
+    try {
+      const l = await window.RV.rpc("fab_listar");
+      const lista = Array.isArray(l) ? l : [];
+      try { localStorage.setItem(CACHE, JSON.stringify(lista)); } catch (e) {}
+      return { lista, offline: false };
+    } catch (e) {
+      if (e.rede) return { lista: lerCache(), offline: true };
+      throw e;
+    }
+  }
+  const tkLista = (l) => (l || []).slice().sort((x, y) => x.nome.localeCompare(y.nome, "pt-BR", { sensitivity: "base" }));
+  window.Ocorr = { load, save, esc, parseEmails, fabricas, lerCache, tkLista };
 })();

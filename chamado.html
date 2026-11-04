@@ -6,20 +6,19 @@
 <meta name="theme-color" content="#070d24">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
-<title>Abrir chamado</title>
+<title>Alerta Fábrica</title>
 <link rel="stylesheet" href="ocorr.css">
 <script src="rv-config.js"></script><script src="rv.js"></script><script src="acesso.js" data-exigir="ocorrencias"></script>
 </head>
 <body>
 <div class="wrap">
-  <a class="back" href="ocorrencias.html">← Ocorrências</a>
+  <a class="back" href="ocorrencias.html">← Alerta Fábrica</a>
 
   <div id="tela">
     <div class="ico">🚨</div>
-    <h1>Abrir chamado</h1>
-    <p class="sub">Preencha os dados, anexe as evidências e envie para a fábrica.</p>
+    <h1>Novo alerta</h1>
+    <p class="sub">Preencha os dados e anexe as evidências. Ao enviar, o e-mail abre pronto no seu aparelho, com a fábrica, o pessoal em cópia e as fotos.</p>
 
-    <div class="callout yellow hidden" id="semConfig"><p>⚙️ O envio por e-mail ainda não foi configurado. Você pode preencher o formulário, mas o botão Enviar só funciona depois de colar o endereço do script em <code>config.js</code>.</p></div>
 
     <div class="sec">Fábrica</div>
     <div class="field" id="fFab">
@@ -28,7 +27,7 @@
     </div>
     <div class="callout blue hidden" id="semFab"><p>Nenhuma fábrica cadastrada. <a href="fabricas.html">Cadastrar fábrica →</a></p></div>
 
-    <div class="sec">Dados da ocorrência</div>
+    <div class="sec">Dados do alerta</div>
     <div class="grid">
       <div class="field"><label for="nf">N° da NF</label><input id="nf" type="text" inputmode="numeric" autocomplete="off" placeholder="Ex.: 162375"></div>
       <div class="field"><label for="motorista">Nome do motorista</label><input id="motorista" type="text" autocomplete="off" placeholder="Nome completo"></div>
@@ -36,7 +35,7 @@
       <div class="field"><label for="cavalo">Placa do cavalo</label><input id="cavalo" type="text" autocomplete="off" autocapitalize="characters" maxlength="8" placeholder="ABC1D23"></div>
     </div>
 
-    <div class="sec">Descrição da ocorrência</div>
+    <div class="sec">Descrição</div>
     <div class="field" id="fDesc">
       <label for="desc">O que aconteceu?</label>
       <textarea id="desc" placeholder="Descreva com detalhes: o que foi encontrado, onde, quantos pallets/itens, horário…"></textarea>
@@ -56,40 +55,44 @@
 
     <div class="callout red hidden" id="erro"><p id="erroTxt"></p></div>
     <div style="margin-top:22px">
-      <button class="btn primary big" type="button" id="enviar">📨 Enviar ocorrência</button>
+      <button class="btn primary big" type="button" id="enviar">📨 Registrar e abrir e-mail</button>
     </div>
-    <p class="sub" style="margin-top:10px;font-size:13px">O e-mail será enviado com o assunto: <b id="assunto"></b></p>
+    <p class="sub" style="margin-top:10px;font-size:13px">As fotos sobem para o servidor e vão no e-mail como links. O e-mail só é enviado quando você tocar em Enviar no app de e-mail.</p>
   </div>
 
   <div id="ok" class="ok-box hidden">
-    <div class="big">✅</div>
-    <h1>Ocorrência enviada</h1>
+    <div class="big">📨</div>
+    <h1>Alerta registrado</h1>
     <p>Protocolo <code id="prot"></code></p>
     <p class="sub" id="okPara"></p>
-    <div class="row" style="justify-content:center">
-      <button class="btn primary" type="button" id="outra">Registrar outra</button>
+    <div class="callout yellow"><p><b>Falta um passo:</b> o e-mail só sai quando você tocar em <b>Enviar</b> no app de e-mail do aparelho.</p></div>
+    <div class="row" style="justify-content:center;flex-direction:column;align-items:stretch">
+      <a class="btn primary big" id="abrirMail" href="#">📧 Abrir e-mail</a>
+      <button class="btn hidden" type="button" id="compFotos">📎 Compartilhar fotos como anexo</button>
+      <button class="btn" type="button" id="copiar">📋 Copiar texto do e-mail</button>
+    </div>
+    <div class="row" style="justify-content:center;margin-top:14px">
+      <button class="btn" type="button" id="outra">Registrar outro</button>
       <a class="btn" href="ocorrencias.html">Voltar</a>
     </div>
   </div>
 </div>
 
-<script src="config.js"></script>
 <script src="ocorr.js"></script>
 <script>
   const $ = (id) => document.getElementById(id);
-  const CFG = window.OCORR_CONFIG;
+  const CFG = { MAX_TOTAL_MB: 15 };
   const MAX = CFG.MAX_TOTAL_MB * 1024 * 1024;
+  const ASSUNTO = "Alerta Fábrica CDD Embu";
+  let fabs = [], ultimo = null;
   const DRAFT = "ocorr_rascunho_v1";
   let itens = [];       // {id, file, url, isVideo}
   let ocupado = false;  // processando fotos ou enviando
 
-  $("assunto").textContent = CFG.ASSUNTO;
-  const configurado = CFG.ENDPOINT && /^https:\/\//.test(CFG.ENDPOINT);
-  if (!configurado) $("semConfig").classList.remove("hidden");
 
   // ---------- Fábricas ----------
   function carregarFabricas(sel) {
-    const l = Ocorr.load();
+    const l = fabs;
     const atual = sel || $("fab").value;
     $("fab").innerHTML =
       '<option value="">Selecione a fábrica…</option>' +
@@ -98,6 +101,7 @@
     $("semFab").classList.toggle("hidden", l.length > 0);
     return l;
   }
+  let rascFab = null;
 
   // ---------- Rascunho (só texto) ----------
   function salvarRascunho() {
@@ -116,13 +120,13 @@
       $("nf").value = d.nf || ""; $("motorista").value = d.motorista || "";
       $("carreta").value = d.carreta || ""; $("cavalo").value = d.cavalo || "";
       $("desc").value = d.desc || "";
-      carregarFabricas(d.fab);
+      rascFab = d.fab || null;
     } catch (e) {}
   }
 
-  carregarFabricas();
   restaurarRascunho();
   atualizarContador();
+  Ocorr.fabricas().then((r) => { fabs = Ocorr.tkLista(r.lista); carregarFabricas(rascFab); }).catch(() => { fabs = Ocorr.tkLista(Ocorr.lerCache()); carregarFabricas(rascFab); });
 
   ["fab", "nf", "motorista", "carreta", "cavalo", "desc"].forEach((id) =>
     $(id).addEventListener("input", () => {
@@ -230,92 +234,109 @@
     $("erro").classList.toggle("hidden", !t);
     if (t) $("erro").scrollIntoView({ behavior: "smooth", block: "center" });
   }
-  const paraB64 = (file) => new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(String(r.result).split(",")[1] || "");
-    r.onerror = () => rej(r.error);
-    r.readAsDataURL(file);
-  });
+  const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : "x" + Date.now() + Math.random().toString(36).slice(2, 10));
+  const nomeUsuario = () => { const p = (RV.perfilCache && RV.perfilCache()) || {}; return (p.nome || "") + (p.matricula ? " (" + p.matricula + ")" : ""); };
+  const MAXURL = 7500;
+
+  function montarEmail(r, d, links) {
+    const L = [];
+    L.push("Protocolo: " + r.protocolo);
+    L.push("Fábrica: " + r.fabrica);
+    if (d.nf) L.push("NF: " + d.nf);
+    if (d.motorista) L.push("Motorista: " + d.motorista);
+    if (d.carreta) L.push("Placa da carreta: " + d.carreta);
+    if (d.cavalo) L.push("Placa do cavalo: " + d.cavalo);
+    L.push("", "Descrição:", d.desc);
+    if (links.length) { L.push("", "Evidências (fotos/vídeos):"); links.forEach((u, k) => L.push((k + 1) + ") " + u)); }
+    L.push("", "Enviado por " + (r.por || nomeUsuario()) + (r.matricula ? " (" + r.matricula + ")" : "") + " via app Embu Excelente.");
+    const assunto = ASSUNTO + (d.nf ? " – NF " + d.nf : "") + " – Protocolo " + r.protocolo;
+    return { assunto, corpo: L.join("\r\n") };
+  }
+  function mailto(r, m, corpo) {
+    return "mailto:" + (r.para || []).map(encodeURIComponent).join(",") +
+      "?cc=" + (r.cc || []).map(encodeURIComponent).join(",") +
+      "&subject=" + encodeURIComponent(m.assunto) +
+      "&body=" + encodeURIComponent(corpo);
+  }
 
   $("enviar").addEventListener("click", async () => {
     if (ocupado) return;
     erro("");
-    const fab = Ocorr.load().find((f) => f.id === $("fab").value);
+    const fab = fabs.find((f) => f.id === $("fab").value);
     const desc = $("desc").value.trim();
     $("fFab").classList.toggle("err", !fab);
     $("fDesc").classList.toggle("err", !desc);
-    if (!fab) return erro("Selecione a fábrica que vai receber a ocorrência.");
+    if (!fab) return erro("Selecione a fábrica que vai receber o alerta.");
     if (!desc) return erro("Descreva a ocorrência.");
-    if (!configurado) return erro("O envio ainda não foi configurado (endereço do script em config.js).");
     if (total() > MAX) return erro("As evidências passam do limite de " + CFG.MAX_TOTAL_MB + " MB. Remova algum arquivo.");
 
     ocupado = true;
     const btn = $("enviar");
     btn.disabled = true;
-    btn.textContent = "⏳ Enviando… não feche esta tela";
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 180000);
     try {
-      const anexos = [];
+      const pasta = uuid();
+      const caminhos = [];
       let n = 0;
       for (const i of itens) {
         n++;
-        anexos.push({
-          nome: "evidencia-" + String(n).padStart(2, "0") + "." + extensao(i.file),
-          tipo: i.file.type || "application/octet-stream",
-          dados: await paraB64(i.file)
-        });
+        btn.textContent = "⏳ Enviando arquivo " + n + " de " + itens.length + "…";
+        const cam = pasta + "/" + n + "." + extensao(i.file);
+        await RV.enviarArquivo("evidencias", cam, i.file);
+        caminhos.push(cam);
       }
-      const payload = {
-        token: CFG.TOKEN,
-        assunto: CFG.ASSUNTO,
-        para: fab.email,
-        fabrica: fab.nome,
-        nf: $("nf").value.trim(),
-        placaCarreta: $("carreta").value.trim(),
-        placaCavalo: $("cavalo").value.trim(),
-        motorista: $("motorista").value.trim(),
-        descricao: desc,
-        anexos
-      };
-      const res = await fetch(CFG.ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(payload),
-        signal: ctrl.signal
+      btn.textContent = "⏳ Registrando…";
+      const d = { nf: $("nf").value.trim(), motorista: $("motorista").value.trim(), carreta: $("carreta").value.trim(), cavalo: $("cavalo").value.trim(), desc };
+      const r = await RV.rpc("alerta_registrar", {
+        p_fabrica: fab.id, p_nf: d.nf, p_motorista: d.motorista, p_carreta: d.carreta, p_cavalo: d.cavalo, p_desc: d.desc, p_evidencias: caminhos
       });
-      let r;
-      try { r = await res.json(); } catch (e) { r = null; }
-      if (!r) throw new Error("sem-confirmacao");
-      if (!r.ok) { erro("O envio foi recusado: " + (r.erro || "erro desconhecido") + "."); return; }
+      const links = caminhos.map((c) => RV.urlPublica("evidencias", c));
+      const m = montarEmail(r, d, links);
+      let corpo = m.corpo, cortado = false;
+      let url = mailto(r, m, corpo);
+      if (url.length > MAXURL) {
+        // e-mail longo demais para o link: manda resumo e deixa o texto completo para copiar
+        cortado = true;
+        const curto = (d.desc.length > 600 ? d.desc.slice(0, 600) + "…" : d.desc);
+        const m2 = montarEmail(r, Object.assign({}, d, { desc: curto }), links);
+        corpo = m2.corpo; url = mailto(r, m, corpo);
+      }
+      ultimo = { url, texto: m.corpo, para: r.para || [], cc: r.cc || [], assunto: m.assunto, arquivos: itens.map((i) => i.file) };
 
-      // sucesso
-      itens.forEach((i) => URL.revokeObjectURL(i.url));
-      itens = [];
+      $("prot").textContent = r.protocolo;
+      $("okPara").textContent = "Para: " + (r.para || []).join(", ") + ((r.cc || []).length ? " · Cópia: " + r.cc.join(", ") : "") + " · " + caminhos.length + " arquivo(s) em link" + (cortado ? " · descrição resumida no e-mail (use Copiar texto para o texto completo)" : "") + ".";
+      $("abrirMail").href = url;
+      $("compFotos").classList.toggle("hidden", !(ultimo.arquivos.length && navigator.canShare && navigator.canShare({ files: ultimo.arquivos })));
       limparRascunho();
-      $("prot").textContent = r.protocolo || "—";
-      $("okPara").textContent = "Enviado para " + fab.nome + " (" + fab.email + ") com " + anexos.length + " anexo(s).";
       $("tela").classList.add("hidden");
       $("ok").classList.remove("hidden");
       window.scrollTo({ top: 0 });
+      try { window.location.href = url; } catch (e) {}
     } catch (e) {
-      if (e.name === "AbortError")
-        erro("O envio demorou demais. Verifique o sinal e se o e-mail chegou antes de tentar de novo, para não duplicar. Seus dados continuam na tela.");
-      else if (e.message === "sem-confirmacao")
-        erro("Não consegui confirmar o envio. Veja se o e-mail chegou antes de tentar de novo, para não duplicar. Seus dados continuam na tela.");
-      else
-        erro("Não foi possível enviar (sem internet ou falha de conexão). Seus dados continuam na tela, tente novamente.");
+      if (e.rede) erro("Sem internet. Seus dados continuam na tela, tente novamente.");
+      else erro((e.message || "Não foi possível registrar.") + " Seus dados continuam na tela.");
     } finally {
-      clearTimeout(timer);
       ocupado = false;
       btn.disabled = false;
-      btn.textContent = "📨 Enviar ocorrência";
+      btn.textContent = "📨 Registrar e abrir e-mail";
     }
+  });
+
+  $("copiar").addEventListener("click", async () => {
+    if (!ultimo) return;
+    const t = "Para: " + ultimo.para.join(", ") + "\nCc: " + ultimo.cc.join(", ") + "\nAssunto: " + ultimo.assunto + "\n\n" + ultimo.texto.replace(/\r\n/g, "\n");
+    try { await navigator.clipboard.writeText(t); $("copiar").textContent = "✅ Copiado"; }
+    catch (e) { $("copiar").textContent = "Não consegui copiar"; }
+    setTimeout(() => ($("copiar").textContent = "📋 Copiar texto do e-mail"), 2500);
+  });
+  $("compFotos").addEventListener("click", async () => {
+    if (!ultimo) return;
+    try { await navigator.share({ files: ultimo.arquivos, title: ultimo.assunto }); } catch (e) {}
   });
 
   $("outra").addEventListener("click", () => {
     ["nf", "motorista", "carreta", "cavalo", "desc"].forEach((id) => ($(id).value = ""));
     $("fab").value = "";
+    itens.forEach((i) => URL.revokeObjectURL(i.url)); itens = []; ultimo = null;
     atualizarContador();
     renderEv();
     $("ok").classList.add("hidden");

@@ -128,6 +128,28 @@
     return api(q);
   }
   const rpc = (nome, args) => api("/rest/v1/rpc/" + nome, { method: "POST", body: args });
+
+  // envia um arquivo para o armazenamento (ex.: fotos do Alerta Fábrica). Devolve o caminho.
+  async function enviarArquivo(bucket, caminho, file) {
+    let s = lerSessao();
+    if (!s) throw Object.assign(new Error("Faça login."), { status: 401 });
+    if (s.expires_at - 30 < Date.now() / 1000) { await renovar(); s = lerSessao(); }
+    const tentar = async (tok) => {
+      let r;
+      try {
+        r = await fetch(C.URL + "/storage/v1/object/" + bucket + "/" + caminho, { method: "POST",
+          headers: { apikey: C.KEY, Authorization: "Bearer " + tok, "Content-Type": file.type || "application/octet-stream", "x-upsert": "false", "cache-control": "max-age=31536000" }, body: file });
+      } catch (e) { const err = new Error("Sem conexão com o servidor. Verifique a internet e tente de novo."); err.rede = true; throw err; }
+      if (!r.ok) {
+        let m = ""; try { const j = await r.json(); m = j.message || j.error || ""; } catch (e) {}
+        const err = new Error(m || ("Erro " + r.status)); err.status = r.status; throw err;
+      }
+      return caminho;
+    };
+    try { return await tentar(s.access_token); }
+    catch (e) { if (e.status === 401) { await renovar(); s = lerSessao(); return await tentar(s.access_token); } throw e; }
+  }
+  const urlPublica = (bucket, caminho) => C.URL + "/storage/v1/object/public/" + bucket + "/" + caminho;
   const funcao = (nome, corpo) => api("/functions/v1/" + nome, { method: "POST", body: corpo || {} });
 
   // ---------- formatação ----------
@@ -220,6 +242,6 @@
     return primeiro;
   }
 
-  window.RV = { entrar, sair, logado, userId, perfilCache, guardarPerfil, trocarSenha, meuPerfil, config, dadosDe, rpc, funcao, api, emailDe, painel,
+  window.RV = { entrar, sair, logado, userId, perfilCache, guardarPerfil, trocarSenha, meuPerfil, config, dadosDe, rpc, funcao, enviarArquivo, urlPublica, api, emailDe, painel,
     esc, moeda, numero, num, mesLongo, mesCurto, dataHora };
 })();

@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#070d24">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
-<title>Ocorrências</title>
+<title>Alerta Fábrica</title>
 <link rel="stylesheet" href="ocorr.css">
 <script src="rv-config.js"></script><script src="rv.js"></script><script src="acesso.js" data-exigir="ocorrencias"></script>
 </head>
@@ -14,13 +14,13 @@
 <div class="wrap">
   <a class="back" href="index.html">← Início</a>
   <div class="ico">📨</div>
-  <h1>Ocorrências</h1>
-  <p class="sub">Registre problemas com carretas e envie com fotos e vídeos direto para a fábrica.</p>
+  <h1>Alerta Fábrica</h1>
+  <p class="sub">Avise a fábrica por e-mail sobre problemas na carga, com descrição e fotos.</p>
 
   <div class="menu">
     <a class="item" href="chamado.html">
       <span class="e">🚨</span>
-      <div><b>Abrir chamado</b><span>Registrar a ocorrência e enviar por e-mail</span></div>
+      <div><b>Novo alerta</b><span>Registrar e abrir o e-mail pronto para enviar</span></div>
       <span class="go">›</span>
     </a>
     <a class="item" href="fabricas.html">
@@ -32,9 +32,10 @@
 </div>
 <script src="ocorr.js"></script>
 <script>
-  const n = Ocorr.load().length;
-  document.getElementById("cnt").textContent =
-    n === 0 ? "Nenhuma fábrica cadastrada ainda" : n + (n === 1 ? " fábrica cadastrada" : " fábricas cadastradas");
+  const el = document.getElementById("cnt");
+  function mostra(n) { el.textContent = n === 0 ? "Nenhuma fábrica cadastrada ainda" : n + (n === 1 ? " fábrica cadastrada" : " fábricas cadastradas"); }
+  mostra(Ocorr.lerCache().length);
+  Ocorr.fabricas().then((r) => mostra(r.lista.length)).catch(() => {});
 </script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 {
   "name": "Embu Excelente",
   "short_name": "Embu Excelente",
-  "description": "Rotinas, produtos, recontagem, ocorrências e RV do CDD Embu.",
+  "description": "Rotinas, produtos, recontagem, alerta de fábrica e RV do CDD Embu.",
   "lang": "pt-BR",
   "start_url": "./index.html",
   "scope": "./",

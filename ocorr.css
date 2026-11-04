@@ -1,17 +1,10 @@
+/* Paleta Embu Excelente: azul-marinho quase preto + dourado. Tema único (sem claro/escuro). */
 :root{
-  color-scheme:light dark;
-  --bg:#ffffff; --bg-hover:rgba(55,53,47,.08); --text:#37352f; --muted:#787774;
-  --border:#e1e1df; --callout:#f1f1ef; --code-bg:rgba(135,131,120,.15);
-  --blue:#e7f3f8; --blue-t:#183347; --green:#edf3ec; --green-t:#1c3829; --yellow:#fbf3db; --yellow-t:#402c1b;
-  --red:#fdebec; --red-t:#5d1715; --accent:#2383e2;
-}
-@media (prefers-color-scheme:dark){
-  :root{
-    --bg:#191919; --bg-hover:rgba(255,255,255,.07); --text:#e6e6e4; --muted:#9b9a97;
-    --border:#33332f; --callout:#252525; --code-bg:rgba(135,131,120,.3);
-    --blue:#1b3340; --blue-t:#a6d5ea; --green:#243d30; --green-t:#a8d8b9; --yellow:#413a22; --yellow-t:#ecd9a0;
-    --red:#4a2a2b; --red-t:#f3b1ae;
-  }
+  color-scheme:dark;
+  --bg:#070d24; --bg-hover:rgba(255,255,255,.08); --text:#f4f6fc; --muted:#aab6d6;
+  --border:#26386b; --callout:#101a3d; --code-bg:rgba(170,182,214,.18);
+  --blue:#13275f; --blue-t:#bcd2ff; --green:#123a2c; --green-t:#a8e3c1; --yellow:#3b2f0a; --yellow-t:#ffd96a;
+  --red:#4a1d24; --red-t:#ffb3b8; --accent:#ffaf10; --accent-t:#070d24; --ouro:#ffaf10; --ouro-t:#ffc247;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5}
@@ -41,7 +34,7 @@ h1{font-size:32px;line-height:1.2;margin:10px 0 4px}
 @media (max-width:600px){.grid{grid-template-columns:1fr}h1{font-size:26px}}
 .btn{border:1px solid var(--border);background:var(--bg);color:var(--text);padding:10px 14px;border-radius:8px;font:inherit;font-size:15px;cursor:pointer;display:inline-flex;gap:8px;align-items:center;justify-content:center}
 .btn:hover{background:var(--bg-hover)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-t);font-weight:700}
 .btn.primary:hover{filter:brightness(.95)}
 .btn.danger{color:#e03e3e}
 .btn[disabled]{opacity:.5;cursor:not-allowed}

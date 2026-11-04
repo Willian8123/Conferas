@@ -1,6 +1,6 @@
 // Service worker: deixa o app funcionar offline.
 // Ao alterar qualquer arquivo, aumente a versão abaixo para o celular atualizar.
-const VERSION = "rotinas-v35";
+const VERSION = "rotinas-v36";
 const FILES = [
   "./",
   "./index.html",
@@ -40,6 +40,7 @@ const FILES = [
   "./icon-192.png", "./apple-touch-icon.png", "./foto.js", "./conta.js", "./login.css", "./feed.html", "./feed.js", "./feed.css",
   "./recontrole.html", "./recparser.js", "./aviso.js", "./notificacoes.html",
   "./badge-96.png", "./icon-512.png",
+  "./titulo-embu.webp", "./gotas.webp", "./garrafa-brahma.webp", "./garrafa-bud.webp", "./garrafa-spaten.webp", "./garrafa-cero.webp",
   "./icon-maskable-512.png"
 ];
 

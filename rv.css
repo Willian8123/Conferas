@@ -6,7 +6,7 @@
 .rvsmall{font-size:13px;color:var(--muted)}
 .rvmeses{display:flex;gap:8px;overflow-x:auto;padding:4px 0 8px;margin:6px 0 4px;-webkit-overflow-scrolling:touch}
 .rvmes{flex:none;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:999px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer}
-.rvmes.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.rvmes.on{background:var(--accent);border-color:var(--accent);color:var(--accent-t);font-weight:700}
 .rvhero{background:var(--blue);color:var(--blue-t);border-radius:14px;padding:20px 18px;margin:8px 0}
 .rvhl{font-size:14px;font-weight:600;opacity:.85}
 .rvval{font-size:44px;line-height:1.1;font-weight:700;margin:6px 0 4px;letter-spacing:-.5px}
@@ -53,7 +53,7 @@
 .quem{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid var(--border);border-radius:10px;padding:8px 8px 8px 14px;margin:0 0 14px;font-size:15px;color:var(--muted)}
 .quem b{color:var(--text)}
 .portas{display:grid;gap:12px;margin:6px 0}
-.porta{display:flex;gap:16px;align-items:center;padding:22px 18px;border:1px solid var(--border);border-radius:14px;text-decoration:none;color:var(--text);transition:background .1s}
+.porta{display:flex;gap:16px;align-items:center;padding:22px 18px;background:var(--callout);border:1px solid var(--border);border-radius:14px;text-decoration:none;color:var(--text);transition:background .1s}
 .porta:hover,.porta:active{background:var(--bg-hover)}
 .porta .pi{font-size:40px;line-height:1;flex:none;width:56px;height:56px;display:grid;place-items:center}
 .porta .pi img{max-width:56px;max-height:56px;object-fit:contain}
@@ -67,22 +67,38 @@
 .acs{display:flex;flex-wrap:wrap;gap:2px 18px}
 .acs .chk{padding:7px 0}
 
-/* tela inicial: logo do CDD Embu centralizada */
+/* tela inicial: título Embu Excelente centralizado */
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .hero{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;margin:10px 0 16px}
 .hero .ico{margin:14px 0}
 .hero-glow{position:absolute;top:14px;left:50%;width:min(340px,86vw);aspect-ratio:1;transform:translateX(-50%);border-radius:50%;
-  background:radial-gradient(circle,rgba(35,131,226,.30) 0%,rgba(35,131,226,.10) 45%,transparent 70%);filter:blur(10px);z-index:0;animation:brilho 5s ease-in-out infinite}
-.hero-logo{position:relative;z-index:1;display:block;width:min(300px,76vw);height:auto;margin:0 auto;
-  filter:drop-shadow(0 12px 18px rgba(8,28,90,.35));animation:heroEntra .8s cubic-bezier(.2,.8,.2,1) both,heroFlutua 6s ease-in-out .9s infinite}
+  background:radial-gradient(circle,rgba(255,175,16,.16) 0%,rgba(255,175,16,.05) 45%,transparent 70%);filter:blur(10px);z-index:0;animation:brilho 5s ease-in-out infinite}
+.hero-logo{position:relative;z-index:1;display:block;width:min(330px,80vw);height:auto;margin:0 auto;
+  filter:drop-shadow(0 8px 16px rgba(0,0,0,.5));animation:heroEntra .8s cubic-bezier(.2,.8,.2,1) both,heroFlutua 6s ease-in-out .9s infinite}
 .hero-sub{position:relative;z-index:1;margin:8px 0 0;color:var(--muted);font-size:15px;letter-spacing:.3px}
+/* cartões de marca: garrafa + degradê da cor da cerveja + gotinhas de condensação */
+.porta.marca{position:relative;overflow:hidden;min-height:112px;padding:14px 18px 14px 14px;border-color:var(--bc);
+  background:linear-gradient(105deg,var(--c1) 0%,var(--c2) 45%,var(--c3) 100%);color:#fff}
+.porta.marca::before{content:"";position:absolute;inset:0;background:url(gotas.webp) var(--gx,0%) var(--gy,0%)/480px 200px;mix-blend-mode:soft-light;opacity:.95;pointer-events:none;z-index:0}
+.porta.marca>*{position:relative;z-index:1}
+.porta.marca span,.porta.marca .go{color:rgba(255,255,255,.84)}
+.porta.marca b{text-shadow:0 1px 2px rgba(0,0,0,.3)}
+.porta.marca .gar{flex:none;width:58px;height:112px;display:grid;place-items:center;margin-left:-2px}
+.porta.marca .gar img{height:104px;width:auto;transform:rotate(14deg);transform-origin:50% 92%;filter:drop-shadow(0 6px 8px rgba(0,0,0,.45));transition:transform .5s cubic-bezier(.3,1.6,.5,1)}
+.porta.marca:active .gar img,.porta.marca.toque .gar img{transform:rotate(24deg) translateY(-3px)}
+.porta.brahma{--c1:#e4401b;--c2:#c92a17;--c3:#9c1c0e;--bc:#a8200f;--gx:0%;--gy:20%}
+.porta.bud{--c1:#a50f2a;--c2:#7d0b20;--c3:#45060f;--bc:#5c0a18;--gx:100%;--gy:60%}
+.porta.spaten{--c1:#1f8a3b;--c2:#13692b;--c3:#0a3f19;--bc:#0f5a25;--gx:35%;--gy:100%}
+.porta.cero{--c1:#2584cc;--c2:#1b6cb2;--c3:#12497f;--bc:#17609c;--gx:70%;--gy:0%}
+.porta:not(.marca):hover,.porta:not(.marca):active{background:var(--bg-hover)}
+@media (min-width:700px){.porta.marca{flex-direction:row;text-align:left}.porta.marca .go{margin-left:auto}}
+@media (prefers-reduced-motion:reduce){.porta.marca .gar img{transition:none}}
 .portas .porta{animation:portaSobe .55s cubic-bezier(.2,.8,.2,1) both}
 .portas .porta:nth-child(1){animation-delay:.15s}.portas .porta:nth-child(2){animation-delay:.25s}.portas .porta:nth-child(3){animation-delay:.35s}
 @keyframes heroEntra{from{opacity:0;transform:scale(.86) translateY(14px)}to{opacity:1;transform:none}}
 @keyframes heroFlutua{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 @keyframes brilho{0%,100%{opacity:.75;transform:translateX(-50%) scale(1)}50%{opacity:1;transform:translateX(-50%) scale(1.06)}}
 @keyframes portaSobe{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-@media (prefers-color-scheme:dark){.hero-glow{background:radial-gradient(circle,rgba(46,140,255,.42) 0%,rgba(46,140,255,.14) 45%,transparent 70%)}.hero-logo{filter:drop-shadow(0 12px 22px rgba(0,0,0,.6))}}
 @media (prefers-reduced-motion:reduce){.hero-logo,.hero-glow,.portas .porta{animation:none}}
 /* lista de pessoas (admin): nome e acessos em cima, botões embaixo */
 #listaFunc .li{row-gap:8px}

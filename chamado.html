@@ -68,7 +68,7 @@
     <div class="callout yellow"><p><b>Falta um passo:</b> o e-mail só sai quando você tocar em <b>Enviar</b> no app de e-mail do aparelho.</p></div>
     <div class="row" style="justify-content:center;flex-direction:column;align-items:stretch">
       <a class="btn primary big" id="abrirMail" href="#">📧 Abrir e-mail</a>
-      <button class="btn hidden" type="button" id="compFotos">📎 Compartilhar fotos como anexo</button>
+      <button class="btn hidden" type="button" id="compFotos">📎 Anexar fotos (copia Para/Cc)</button>
       <button class="btn" type="button" id="copiar">📋 Copiar texto do e-mail</button>
     </div>
     <div class="row" style="justify-content:center;margin-top:14px">
@@ -330,7 +330,8 @@
   });
   $("compFotos").addEventListener("click", async () => {
     if (!ultimo) return;
-    try { await navigator.share({ files: ultimo.arquivos, title: ultimo.assunto }); } catch (e) {}
+    try { await navigator.clipboard.writeText("Para: " + ultimo.para.join("; ") + "\nCc: " + ultimo.cc.join("; ")); } catch (e) {}
+    try { await navigator.share({ files: ultimo.arquivos, title: ultimo.assunto, text: ultimo.texto.replace(/\r\n/g, "\n") }); } catch (e) {}
   });
 
   $("outra").addEventListener("click", () => {

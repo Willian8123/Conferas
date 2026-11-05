@@ -69,7 +69,7 @@
   }
 
   const editavel = () => estado.fonte === "servidor" && estado.tabela === true && permitido();
-  const podeSemear = () => estado.vazia && estado.tabela === true && permitido();
+  const podeSemear = () => estado.vazia && estado.tabela === true && permitido() && base().length > 0;
 
   async function mudar(fn) {
     if (!permitido()) throw new Error("Seu login não tem permissão para alterar a lista de produtos.");

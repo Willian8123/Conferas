@@ -41,7 +41,6 @@
 </div>
 <div class="toast hidden" id="toast"></div>
 <script src="util.js"></script>
-<script src="produtos-dados.js"></script>
 <script src="produtos-fonte.js"></script>
 <script>
 let P=[],PN=[];
@@ -53,7 +52,7 @@ let pres=[],pshow=60,ptoks=[],avisoLista=null;
 
 function indexar(){
   P=Catalogo.lista();PN=P.map(p=>norm(p[1]));
-  if(!avisoLista&&!P.length){avisoLista=document.createElement("div");avisoLista.className="callout red";avisoLista.innerHTML="<p>⚠️ A lista de produtos não carregou. Confira se o arquivo <b>produtos-dados.js</b> está no GitHub (na mesma pasta do index.html) e atualize o app.</p>";document.querySelector(".pbox").before(avisoLista)}
+  if(!avisoLista&&!P.length){avisoLista=document.createElement("div");avisoLista.className="callout red";avisoLista.innerHTML="<p>⚠️ A lista de produtos não carregou. Conecte-se à internet e abra de novo para baixar a lista.</p>";document.querySelector(".pbox").before(avisoLista)}
   else if(avisoLista&&P.length){avisoLista.remove();avisoLista=null}
 }
 let toastT;

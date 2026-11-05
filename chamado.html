@@ -55,22 +55,33 @@
 
     <div class="callout red hidden" id="erro"><p id="erroTxt"></p></div>
     <div style="margin-top:22px">
-      <button class="btn primary big" type="button" id="enviar">📨 Registrar e abrir e-mail</button>
+      <button class="btn primary big" type="button" id="enviar">📨 Registrar alerta</button>
     </div>
-    <p class="sub" style="margin-top:10px;font-size:13px">As fotos sobem para o servidor e vão no e-mail como links. O e-mail só é enviado quando você tocar em Enviar no app de e-mail.</p>
+    <p class="sub" style="margin-top:10px;font-size:13px">As fotos sobem para o servidor e o alerta fica registrado. Em seguida, o e-mail é enviado ou aberto para você, conforme a configuração do administrador.</p>
   </div>
 
   <div id="ok" class="ok-box hidden">
-    <div class="big">📨</div>
+    <div class="big" id="okIco">📨</div>
     <h1>Alerta registrado</h1>
     <p>Protocolo <code id="prot"></code></p>
     <p class="sub" id="okPara"></p>
-    <div class="callout yellow"><p><b>Falta um passo:</b> o e-mail só sai quando você tocar em <b>Enviar</b> no app de e-mail do aparelho.</p></div>
-    <div class="row" style="justify-content:center;flex-direction:column;align-items:stretch">
-      <a class="btn primary big" id="abrirMail" href="#">📧 Abrir e-mail</a>
-      <button class="btn hidden" type="button" id="compFotos">📎 Anexar fotos (copia Para/Cc)</button>
-      <button class="btn" type="button" id="copiar">📋 Copiar texto do e-mail</button>
+
+    <div id="boxScript" class="hidden">
+      <div class="callout blue" id="stScript"><p id="stScriptTxt">⏳ Enviando o e-mail…</p></div>
+      <div class="row hidden" id="rowTentar" style="justify-content:center"><button class="btn primary" type="button" id="tentar">🔁 Tentar enviar de novo</button></div>
     </div>
+
+    <div id="boxOutlook" class="hidden">
+      <div class="callout yellow"><p><b>Falta um passo:</b> o e-mail só sai quando você tocar em <b>Enviar</b> no app de e-mail do aparelho.</p></div>
+      <div class="row" style="justify-content:center;flex-direction:column;align-items:stretch">
+        <button class="btn primary big hidden" type="button" id="compFotos">📎 Anexar fotos (já copia o Para)</button>
+        <a class="btn big" id="abrirMail" href="#">📧 Abrir e-mail (fotos em link)</a>
+        <button class="btn" type="button" id="copiarCc">📋 Copiar Cc</button>
+        <button class="btn" type="button" id="copiar">📋 Copiar texto do e-mail</button>
+      </div>
+      <p class="sub" id="dicaAnexar" style="font-size:13px;margin-top:10px">Com <b>Anexar fotos</b>: cole o Para (já copiado), envie, e depois volte aqui para copiar o Cc se precisar. Com <b>Abrir e-mail</b> os endereços já vêm preenchidos.</p>
+    </div>
+
     <div class="row" style="justify-content:center;margin-top:14px">
       <button class="btn" type="button" id="outra">Registrar outro</button>
       <a class="btn" href="ocorrencias.html">Voltar</a>
@@ -291,6 +302,7 @@
       });
       const links = caminhos.map((c) => RV.urlPublica("evidencias", c));
       const m = montarEmail(r, d, links);
+      const mSem = montarEmail(r, d, []); // para o "Anexar fotos": as fotos vão anexadas, sem links no texto
       let corpo = m.corpo, cortado = false;
       let url = mailto(r, m, corpo);
       if (url.length > MAXURL) {
@@ -300,39 +312,67 @@
         const m2 = montarEmail(r, Object.assign({}, d, { desc: curto }), links);
         corpo = m2.corpo; url = mailto(r, m, corpo);
       }
-      ultimo = { url, texto: m.corpo, para: r.para || [], cc: r.cc || [], assunto: m.assunto, arquivos: itens.map((i) => i.file) };
+      ultimo = { id: r.id, url, texto: m.corpo, textoSem: mSem.corpo, para: r.para || [], cc: r.cc || [], assunto: m.assunto, arquivos: itens.map((i) => i.file) };
 
       $("prot").textContent = r.protocolo;
-      $("okPara").textContent = "Para: " + (r.para || []).join(", ") + ((r.cc || []).length ? " · Cópia: " + r.cc.join(", ") : "") + " · " + caminhos.length + " arquivo(s) em link" + (cortado ? " · descrição resumida no e-mail (use Copiar texto para o texto completo)" : "") + ".";
+      $("okPara").textContent = "Para: " + (r.para || []).join(", ") + ((r.cc || []).length ? " · Cópia: " + r.cc.join(", ") : "") + " · " + caminhos.length + " arquivo(s)";
       $("abrirMail").href = url;
-      $("compFotos").classList.toggle("hidden", !(ultimo.arquivos.length && navigator.canShare && navigator.canShare({ files: ultimo.arquivos })));
+      $("copiarCc").classList.toggle("hidden", !ultimo.cc.length);
+      const podeCompartilhar = !!(ultimo.arquivos.length && navigator.canShare && navigator.canShare({ files: ultimo.arquivos }));
+      $("compFotos").classList.toggle("hidden", !podeCompartilhar);
+      $("abrirMail").classList.toggle("primary", !podeCompartilhar);
+      $("dicaAnexar").classList.toggle("hidden", !podeCompartilhar);
+      const auto = r.modo === "script";
+      $("boxScript").classList.toggle("hidden", !auto);
+      $("boxOutlook").classList.toggle("hidden", auto);
       limparRascunho();
       $("tela").classList.add("hidden");
       $("ok").classList.remove("hidden");
       window.scrollTo({ top: 0 });
-      try { window.location.href = url; } catch (e) {}
+      if (auto) enviarScript(); // modo Gmail: o servidor envia sozinho
     } catch (e) {
       if (e.rede) erro("Sem internet. Seus dados continuam na tela, tente novamente.");
       else erro((e.message || "Não foi possível registrar.") + " Seus dados continuam na tela.");
     } finally {
       ocupado = false;
       btn.disabled = false;
-      btn.textContent = "📨 Registrar e abrir e-mail";
+      btn.textContent = "📨 Registrar alerta";
     }
   });
 
-  $("copiar").addEventListener("click", async () => {
+  async function copiarTxt(t, btn, rotulo) {
+    try { await navigator.clipboard.writeText(t); btn.textContent = "✅ Copiado"; }
+    catch (e) { btn.textContent = "Não consegui copiar"; }
+    setTimeout(() => (btn.textContent = rotulo), 2500);
+  }
+  $("copiar").addEventListener("click", () => {
     if (!ultimo) return;
-    const t = "Para: " + ultimo.para.join(", ") + "\nCc: " + ultimo.cc.join(", ") + "\nAssunto: " + ultimo.assunto + "\n\n" + ultimo.texto.replace(/\r\n/g, "\n");
-    try { await navigator.clipboard.writeText(t); $("copiar").textContent = "✅ Copiado"; }
-    catch (e) { $("copiar").textContent = "Não consegui copiar"; }
-    setTimeout(() => ($("copiar").textContent = "📋 Copiar texto do e-mail"), 2500);
+    copiarTxt("Para: " + ultimo.para.join("; ") + "\nCc: " + ultimo.cc.join("; ") + "\nAssunto: " + ultimo.assunto + "\n\n" + ultimo.texto.replace(/\r\n/g, "\n"), $("copiar"), "📋 Copiar texto do e-mail");
   });
+  $("copiarCc").addEventListener("click", () => { if (ultimo) copiarTxt(ultimo.cc.join("; "), $("copiarCc"), "📋 Copiar Cc"); });
   $("compFotos").addEventListener("click", async () => {
     if (!ultimo) return;
-    try { await navigator.clipboard.writeText("Para: " + ultimo.para.join("; ") + "\nCc: " + ultimo.cc.join("; ")); } catch (e) {}
-    try { await navigator.share({ files: ultimo.arquivos, title: ultimo.assunto, text: ultimo.texto.replace(/\r\n/g, "\n") }); } catch (e) {}
+    try { await navigator.clipboard.writeText(ultimo.para.join("; ")); } catch (e) {}
+    try { await navigator.share({ files: ultimo.arquivos, title: ultimo.assunto, text: ultimo.textoSem.replace(/\r\n/g, "\n") }); } catch (e) {}
   });
+
+  // ---- modo Gmail (script): o servidor envia ----
+  async function enviarScript() {
+    const st = $("stScript"), tx = $("stScriptTxt");
+    st.className = "callout blue"; tx.textContent = "⏳ Enviando o e-mail…";
+    $("rowTentar").classList.add("hidden");
+    try {
+      await RV.funcao("enviar-alerta", { id: ultimo.id });
+      st.className = "callout green"; tx.textContent = "✅ E-mail enviado para a fábrica" + (ultimo.cc.length ? " e para o pessoal em cópia." : ".");
+      $("okIco").textContent = "✅";
+    } catch (e) {
+      st.className = "callout red";
+      tx.textContent = "❌ O e-mail NÃO foi enviado: " + (e.rede ? "sem internet." : (e.message || "erro")) + " O alerta está registrado. Tente de novo ou envie pelo e-mail do celular.";
+      $("rowTentar").classList.remove("hidden");
+      $("boxOutlook").classList.remove("hidden"); // plano B
+    }
+  }
+  $("tentar").addEventListener("click", () => { if (ultimo) enviarScript(); });
 
   $("outra").addEventListener("click", () => {
     ["nf", "motorista", "carreta", "cavalo", "desc"].forEach((id) => ($(id).value = ""));

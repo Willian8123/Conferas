@@ -106,6 +106,16 @@
 
     <!-- VER COMO -->
     <div id="t-af" class="hidden">
+      <div class="sec">Como enviar o alerta</div>
+      <div class="field"><label class="chk"><input type="radio" name="afModo" value="outlook" checked> 📱 Pelo e-mail do celular (Outlook/Gmail do aparelho) — o conferente toca em Enviar</label>
+        <label class="chk" style="margin-top:8px"><input type="radio" name="afModo" value="script"> 📨 Automático pelo Gmail (script do Google) — sai sozinho, com fotos anexadas</label></div>
+      <div id="afScript" class="hidden">
+        <div class="field"><label for="afUrl">Endereço do script (termina em /exec)</label><input id="afUrl" type="url" autocapitalize="none" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec"></div>
+        <div class="field" style="margin-top:8px"><label for="afTok">Token (o mesmo do código do script)</label><input id="afTok" type="password" autocomplete="off" placeholder="deixe em branco para manter o atual"><span class="hint" id="afTokDica"></span></div>
+      </div>
+      <div class="row"><button class="btn primary" type="button" id="btnSalvarModo">Salvar modo de envio</button></div>
+      <div class="callout hidden" id="msgModo"><p id="msgModoTxt"></p></div>
+
       <div class="sec">E-mails em cópia (Cc)</div>
       <p class="sub">Esses endereços vão em cópia em todo e-mail do Alerta Fábrica (até 6). Deixe em branco o que não usar.</p>
       <div class="field"><label for="cc1">Cc 1</label><input id="cc1" type="email" inputmode="email" autocapitalize="none" autocomplete="off"></div>
@@ -187,7 +197,7 @@
     document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === b));
     ["func", "imp", "cfg", "af", "ver"].forEach((t) => $("t-" + t).classList.toggle("hidden", t !== b.dataset.t));
     if (b.dataset.t === "ver") prepararVer();
-    if (b.dataset.t === "af") carregarCc();
+    if (b.dataset.t === "af") { carregarModo(); carregarCc(); }
     if (b.dataset.t === "cfg") carregarColunas().then(desenharCfg);
   });
 
@@ -444,6 +454,25 @@
   });
 
   // ---------- Alerta Fábrica: e-mails em cópia ----------
+  function modoSel() { return (document.querySelector('input[name="afModo"]:checked') || {}).value || "outlook"; }
+  function mostraScript() { $("afScript").classList.toggle("hidden", modoSel() !== "script"); }
+  document.querySelectorAll('input[name="afModo"]').forEach((r) => r.addEventListener("change", mostraScript));
+  async function carregarModo() {
+    try {
+      const c = await RV.rpc("alerta_admin_ler", {});
+      document.querySelectorAll('input[name="afModo"]').forEach((r) => { r.checked = r.value === c.modo; });
+      $("afUrl").value = c.script_url || ""; $("afTok").value = "";
+      $("afTokDica").textContent = c.tem_token ? "Já existe um token guardado. Só preencha para trocar." : "Ainda não há token guardado.";
+      mostraScript();
+    } catch (e) { aviso("msgModo", e.message); }
+  }
+  $("btnSalvarModo").addEventListener("click", async () => {
+    try {
+      const r = await RV.rpc("alerta_admin_salvar", { p_modo: modoSel(), p_url: $("afUrl").value.trim(), p_token: $("afTok").value.trim() });
+      aviso("msgModo", r.modo === "script" ? "Salvo. Agora o app envia sozinho pelo Gmail." : "Salvo. Agora o app abre o e-mail do celular.", "green");
+      await carregarModo();
+    } catch (e) { aviso("msgModo", e.message); }
+  });
   async function carregarCc() {
     try { const l = await RV.rpc("alerta_cc_ler", {}); for (let i = 1; i <= 6; i++) $("cc" + i).value = (l || [])[i - 1] || ""; }
     catch (e) { aviso("msgCc", e.message); }

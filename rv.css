@@ -127,3 +127,7 @@
 .pess .av.ini{display:grid;font-size:16px;color:var(--muted)}
 
 .quem .qbt{display:flex;gap:6px;flex:none}
+
+/* borda dourada em todos os cartões do menu */
+.portas .porta,.portas .porta.marca{border:2px solid #ffaf10}
+.portas .porta.marca{box-shadow:inset 0 0 0 1px rgba(255,194,71,.28)}

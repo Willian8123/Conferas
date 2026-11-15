@@ -268,7 +268,7 @@
   // Texto desenhado com o contorno das letras da fonte da planilha (Calibri/Carlito), para sair igual em qualquer aparelho.
   const FE = window.FonteEtq;
   const largTxt = (t, size, bold) => { const g = bold ? FE.b : FE.r; let w = 0; for (const ch of t) { const e = g[ch] || FE.b[ch] || FE.b[" "]; w += e[0]; } return w * size / FE.upm; };
-  const LABEL_W = 495.9, LABEL_H = 258.1, GAPV = 6.4, OX = 52.5;
+  const LABEL_W = 495.9, LABEL_H = 258.1, GAPV = 6.4, OX = 22, SX = (595.28 - 2 * OX) / LABEL_W; // etiqueta esticada na largura da folha
   let logoCache = null;
   async function montarPdf(c) {
     const { PDFDocument, StandardFonts, rgb } = PDFLib;
@@ -287,7 +287,7 @@
       const pos = n % 3;
       if (pos === 0) pg = doc.addPage([PW, PH]);
       const T = top0 + pos * (LABEL_H + GAPV);               // topo da etiqueta (de cima para baixo)
-      const X = (x) => OX + x, Y = (y) => PH - (T + y);        // coordenadas locais -> página
+      const X = (x) => OX + x * SX, Y = (y) => PH - (T + y);        // coordenadas locais -> página
       const linha = (x1, y1, x2, y2, e) => pg.drawLine({ start: { x: X(x1), y: Y(y1) }, end: { x: X(x2), y: Y(y2) }, thickness: e, color: preto });
       const texto = (t, x, base, size, bold) => {
         let cx = X(x); const g = bold ? FE.b : FE.r;
@@ -296,8 +296,8 @@
       // centralizado dentro de uma célula; encolhe a letra se não couber (como o "reduzir para caber" do Excel)
       const centro = (t, cx, base, size, bold, maxW) => {
         let sz = size, w = largTxt(t, sz, bold);
-        if (maxW && w > maxW) { sz = size * maxW / w; w = maxW; }
-        texto(t, cx - w / 2, base, sz, bold); return { x0: cx - w / 2, x1: cx + w / 2, sz };
+        if (maxW && w > maxW * SX) { sz = size * maxW * SX / w; w = maxW * SX; }
+        const wl = w / SX; texto(t, cx - wl / 2, base, sz, bold); return { x0: cx - wl / 2, x1: cx + wl / 2, sz };
       };
       const sub = (x0, x1, y, e) => linha(x0, y, x1, y, e);
 
@@ -306,7 +306,7 @@
       const nomeOp = (c.operador || "").toUpperCase(), conf = (c.conferente || "").toUpperCase();
 
       // moldura e divisórias
-      pg.drawRectangle({ x: X(0), y: Y(LABEL_H), width: LABEL_W, height: LABEL_H, borderColor: preto, borderWidth: 0.8 });
+      pg.drawRectangle({ x: X(0), y: Y(LABEL_H), width: LABEL_W * SX, height: LABEL_H, borderColor: preto, borderWidth: 0.8 });
       linha(283.3, 0, 283.3, LABEL_H, 0.8);
       linha(0, 176.8, LABEL_W, 176.8, 0.8);
       linha(0, 224.9, LABEL_W, 224.9, 0.8);
@@ -319,15 +319,16 @@
       sub(cod.x0, cod.x1, 35.5, 1.6);
       // nome do produto + caixa ☑ (R) ou ☒ (T)
       centro(String(it.nome).toUpperCase(), 125.8, 59.0, 11.7, true, 238);
-      pg.drawRectangle({ x: X(261.5), y: Y(58.7), width: 12.5, height: 13, borderColor: preto, borderWidth: 1 });
-      if (L === "R") { linha(263.6, 52.6, 266.8, 56.2, 1.7); linha(266.8, 56.2, 273.6, 45.6, 1.7); }
-      else { linha(263.5, 47.5, 272.5, 56.9, 1.4); linha(272.5, 47.5, 263.5, 56.9, 1.4); }
+      const bx = X(267.75), seg = (dx1, y1, dx2, y2, e) => pg.drawLine({ start: { x: bx + dx1, y: Y(y1) }, end: { x: bx + dx2, y: Y(y2) }, thickness: e, color: preto });
+      pg.drawRectangle({ x: bx - 6.25, y: Y(58.7), width: 12.5, height: 13, borderColor: preto, borderWidth: 1 });
+      if (L === "R") { seg(-4.15, 52.6, -0.95, 56.2, 1.7); seg(-0.95, 56.2, 5.85, 45.6, 1.7); }
+      else { seg(-4.25, 47.5, 4.75, 56.9, 1.4); seg(4.75, 47.5, -4.25, 56.9, 1.4); }
       // operador / NF
-      texto("Operador:", 10.9, 79.3, 4.5, true); sub(10.9, 10.9 + largTxt("Operador:", 4.5, true), 79.8, 0.5);
+      texto("Operador:", 10.9, 79.3, 4.5, true); sub(10.9, 10.9 + largTxt("Operador:", 4.5, true) / SX, 79.8, 0.5);
       centro(nomeOp || "-", 72.55, 81.7, 11.7, true, 60);
       texto("NF:", 181.0, 81.4, 10.8, false);
       const nf = String(c.nf || "-"); texto(nf, 196.7, 81.1, 9.9, true);
-      const nfw = largTxt(nf, 9.9, true); sub(196.7, 196.7 + nfw, 81.5, 0.7); sub(196.7, 196.7 + nfw, 83.6, 0.7);
+      const nfw = largTxt(nf, 9.9, true) / SX; sub(196.7, 196.7 + nfw, 81.5, 0.7); sub(196.7, 196.7 + nfw, 83.6, 0.7);
       // validade e limites
       centro("Validade:", 36.25, 136.6, 13.5, true);
       centro(fmt(venc), 177.85, 143.0, 32.4, true);
@@ -337,15 +338,16 @@
       centro(fmt(menos(venc, 60)), 209.5, 223.5, 21.6, true);
       // coluna da direita
       const cx = 389.6;
-      let sz = 81; while (hb.widthOfTextAtSize(dm, sz) > 200) sz -= 1;
+      let sz = 81; while (hb.widthOfTextAtSize(dm, sz) > 222) sz -= 1;
       pg.drawText(dm, { x: X(cx) - hb.widthOfTextAtSize(dm, sz) / 2, y: Y(116.4), size: sz, font: hb, color: preto });
       const ano = String(venc.getFullYear()), s2 = 36;
       pg.drawText(ano, { x: X(cx) - hb.widthOfTextAtSize(ano, s2) / 2, y: Y(212.7), size: s2, font: hb, color: preto });
       const ct = "CURVA - " + cv, s3 = 17.5;
       pg.drawText(ct, { x: X(cx) - hb.widthOfTextAtSize(ct, s3) / 2, y: Y(247.3), size: s3, font: hb, color: preto });
       // rodapé
-      const rod = [["Conf.", conf || "-", 20.55, 20.5], ["Placa", c.placa || "-", 56.85, 56.8], ["Turno", c.turno, 88.45, 88.45], ["Hora", hora, 120.05, 133.4], ["Origem", c.fabrica || "-", 179.5, 179.45], ["WMS", c.wms, 224.0, 224.0]];
-      rod.forEach(([rot, val, cr, cv2]) => { const r = centro(rot, cr, 248.9, 4.9, true); sub(r.x0, r.x1, 249.4, 0.5); centro(String(val), cv2, 255.9, 4.9, true); });
+      // o último número é a largura da célula: se o texto não couber, a letra encolhe (nunca passa da divisória)
+      const rod = [["Conf.", conf || "-", 20.55, 20.5, 38], ["Placa", c.placa || "-", 56.85, 56.8, 30], ["Turno", c.turno, 88.45, 88.45, 30], ["Hora", hora, 120.05, 133.4, 56], ["Origem", c.fabrica || "-", 179.5, 179.45, 31], ["WMS", c.wms, 224.0, 224.0, 52]];
+      rod.forEach(([rot, val, cr, cv2, mw]) => { const r = centro(rot, cr, 248.9, 4.9, true); sub(r.x0, r.x1, 249.4, 0.5); centro(String(val), cv2, 255.9, 4.9, true, mw); });
       texto("InstaID", 274.9, 255.1, 2.7, true);
     });
     return await doc.save();
@@ -377,7 +379,10 @@
     $("fFab").classList.remove("err");
     if (!itens.length) return aviso("Adicione pelo menos um pallet.");
     const btn = $("gerar"); btn.disabled = true; btn.textContent = "Gerando…";
-    c.itens = itens.map((i) => ({ cod: i.cod, nome: i.nome, venc: i.venc, qtd: i.qtd, curva: curvaDe(i.cod) }));
+    // o nome na etiqueta é o oficial da base (o catálogo do app usa nomes abreviados); sem rede, usa o do app
+    let oficiais = {};
+    try { oficiais = (await RV.rpc("nri_nomes_ler", { p_cods: [...new Set(itens.map((i) => i.cod))] })) || {}; } catch (e) {}
+    c.itens = itens.map((i) => ({ cod: i.cod, nome: oficiais[i.cod] || i.nome, venc: i.venc, qtd: i.qtd, curva: curvaDe(i.cod) }));
     c.quando = Date.now();
     let msgReg = "";
     try {

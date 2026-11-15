@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#070d24">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<title>Identificação de pallets</title>
+<link rel="stylesheet" href="ocorr.css">
+<script src="rv-config.js"></script><script src="rv.js"></script><script src="acesso.js" data-exigir="conferente"></script>
+<style>
+  .seg{display:flex;gap:8px}
+  .seg button{flex:1;padding:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:8px;font:inherit;font-weight:600;cursor:pointer}
+  .seg button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-t)}
+  .seg button.on.nok{background:var(--red);border-color:#a8404d;color:var(--red-t)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .sug{border:1px solid var(--border);border-radius:8px;margin-top:6px;overflow:hidden}
+  .sug button{display:flex;gap:10px;width:100%;text-align:left;padding:10px 12px;border:0;border-bottom:1px solid var(--border);background:var(--bg);color:var(--text);font:inherit;cursor:pointer}
+  .sug button:last-child{border-bottom:0}
+  .sug button b{min-width:56px;color:var(--yellow-t)}
+  .pick{display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--accent);border-radius:8px;margin-top:8px;background:var(--callout)}
+  .pick b{color:var(--yellow-t)}
+  .pick .x{margin-left:auto}
+  .linha{display:flex;gap:10px;align-items:center;padding:12px;border-bottom:1px solid var(--border)}
+  .linha:last-child{border-bottom:0}
+  .linha .t{flex:1;min-width:0}
+  .linha .t b{display:block;font-size:15px}
+  .linha .t span{font-size:13px;color:var(--muted)}
+  .step{display:flex;align-items:center;gap:6px}
+  .step button{width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:18px;cursor:pointer}
+  .step span{min-width:28px;text-align:center;font-weight:700;font-size:17px}
+  .tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:700;margin-left:6px}
+  .tag.A{background:#123a2c;color:#a8e3c1}.tag.B{background:#3b2f0a;color:#ffd96a}.tag.C{background:#26386b;color:#bcd2ff}
+  .totbar{position:sticky;bottom:0;background:var(--bg);border-top:1px solid var(--border);padding:10px 0;margin-top:14px;display:flex;gap:10px;align-items:center}
+  .totbar .n{flex:1;font-size:15px}
+  .totbar .n b{font-size:20px}
+  .hint{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="conferente.html">← Conferente</a>
+  <div class="ico">🏷️</div>
+  <h1>Identificação</h1>
+  <p class="sub">Registre os pallets da carreta com o vencimento de cada um e gere as etiquetas.</p>
+
+  <div class="sec">1. Carreta</div>
+  <div class="field" id="fFab">
+    <label for="fabrica">Fábrica</label>
+    <select id="fabrica"><option value="">Carregando…</option></select>
+  </div>
+  <div class="grid2" style="margin-top:10px">
+    <div class="field"><label for="nf">NF / Pedido</label><input id="nf" type="text" inputmode="numeric" autocomplete="off" placeholder="Ex.: 1393031"></div>
+    <div class="field"><label for="placa">Placa</label><input id="placa" type="text" autocomplete="off" autocapitalize="characters" maxlength="8" placeholder="ABC1D23"></div>
+  </div>
+  <div class="field" style="margin-top:10px"><label for="operador">Operador</label><input id="operador" type="text" autocomplete="off" placeholder="Nome do operador"></div>
+  <div class="grid2" style="margin-top:10px">
+    <div class="field"><label for="turno">Turno</label>
+      <select id="turno"><option value="auto">Automático</option><option>Turno A</option><option>Turno B</option><option>Turno C</option></select>
+      <span class="hint" id="turnoAuto"></span></div>
+    <div class="field"><label>WMS</label>
+      <div class="seg" id="wms"><button type="button" class="on" data-v="OK">OK</button><button type="button" data-v="NOK">NOK</button></div></div>
+  </div>
+  <p class="hint" style="margin:8px 0 0">Data e hora entram sozinhas na etiqueta, e o conferente é o seu login.</p>
+
+  <div class="sec">2. Pallets <small>vale um por vencimento</small></div>
+  <div class="field" id="fProd">
+    <label for="busca">Produto (código ou nome)</label>
+    <input id="busca" type="text" autocomplete="off" placeholder="Ex.: 34608 ou skol lata 350">
+  </div>
+  <div id="sug" class="sug hidden"></div>
+  <div id="pick" class="pick hidden"></div>
+  <div class="grid2" style="margin-top:10px">
+    <div class="field" id="fVenc"><label for="venc">Vencimento</label><input id="venc" type="text" inputmode="numeric" autocomplete="off" placeholder="150627 ou 15/06/27"><span class="hint" id="vencOk">dd/mm/aa</span></div>
+    <div class="field"><label for="qtd">Quantidade de pallets</label><input id="qtd" type="number" inputmode="numeric" min="1" max="500" value="1"></div>
+  </div>
+  <div class="callout red hidden" id="erro"><p id="erroTxt"></p></div>
+  <div class="row" style="margin-top:10px"><button class="btn primary" type="button" id="add">＋ Adicionar à lista</button></div>
+  <p class="hint">Depois de adicionar, o produto e a data ficam preenchidos: para outro pallet igual é só tocar em adicionar de novo, ou usar o + na lista.</p>
+
+  <div class="sec">Lista da carreta <small id="resumo"></small></div>
+  <div class="list" id="lista"><div class="empty">Nenhum pallet adicionado.</div></div>
+
+  <div class="callout yellow hidden" id="aviso"><p id="avisoTxt"></p></div>
+  <div class="totbar">
+    <div class="n"><b id="totP">0</b> pallets</div>
+    <button class="btn" type="button" id="limpar">Limpar</button>
+    <button class="btn primary" type="button" id="gerar">🖨️ Gerar etiquetas</button>
+  </div>
+
+  <div class="callout green hidden" id="pronto">
+    <p id="prontoTxt"></p>
+    <div class="row" style="margin-top:10px">
+      <a class="btn primary" id="abrirPdf" target="_blank" rel="noopener">Abrir PDF</a>
+      <a class="btn" id="baixarPdf">Baixar</a>
+      <button class="btn hidden" type="button" id="compPdf">Compartilhar</button>
+    </div>
+  </div>
+
+  <div class="sec">Últimas carretas</div>
+  <div class="list" id="hist"><div class="empty">Carregando…</div></div>
+</div>
+
+<script src="ocorr.js"></script>
+<script src="util.js"></script>
+<script src="produtos-fonte.js"></script>
+<script src="pdf-lib.min.js"></script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => Ocorr.esc(s == null ? "" : String(s));
+  const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const CK_CURVA = "curva_cache_v1", CK_OP = "ident_operador_v1";
+  let curva = {}, itens = [], escolhido = null, fabs = [], wms = "OK", registrado = null, pdfUrl = null, ultimaBusca = [];
+
+  /* ---------- datas ---------- */
+  const p2 = (n) => String(n).padStart(2, "0");
+  function parseVenc(txt) {
+    const t = String(txt || "").trim();
+    let d, m, a;
+    if (/[^\d]/.test(t)) {
+      const x = t.split(/[^\d]+/).filter(Boolean);
+      if (x.length !== 3) return null;
+      [d, m, a] = x.map(Number);
+    } else if (t.length === 6) { d = +t.slice(0, 2); m = +t.slice(2, 4); a = +t.slice(4); }
+    else if (t.length === 8) { d = +t.slice(0, 2); m = +t.slice(2, 4); a = +t.slice(4); }
+    else return null;
+    if (a < 100) a += 2000;
+    const dt = new Date(a, m - 1, d);
+    if (dt.getFullYear() !== a || dt.getMonth() !== m - 1 || dt.getDate() !== d || a < 2000 || a > 2100) return null;
+    return dt;
+  }
+  const iso = (dt) => dt.getFullYear() + "-" + p2(dt.getMonth() + 1) + "-" + p2(dt.getDate());
+  const deIso = (s) => { const [a, m, d] = s.split("-").map(Number); return new Date(a, m - 1, d); };
+  const fmt = (dt) => p2(dt.getDate()) + "/" + p2(dt.getMonth() + 1) + "/" + dt.getFullYear();
+  const menos = (dt, n) => { const x = new Date(dt); x.setDate(x.getDate() - n); return x; };
+
+  function turnoAuto(d) { const h = (d || new Date()).getHours(); return h >= 6 && h < 14 ? "Turno A" : h >= 14 && h < 22 ? "Turno B" : "Turno C"; }
+  const turnoAtual = () => ($("turno").value === "auto" ? turnoAuto() : $("turno").value);
+  const letra = (c, w) => (c === "C" && w === "NOK" ? "T" : "R");
+
+  /* ---------- cabeçalho ---------- */
+  $("turnoAuto").textContent = "agora: " + turnoAuto();
+  try { $("operador").value = localStorage.getItem(CK_OP) || ""; } catch (e) {}
+  $("operador").addEventListener("change", () => { try { localStorage.setItem(CK_OP, $("operador").value.trim()); } catch (e) {} marcarMudou(); });
+  $("wms").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    wms = b.dataset.v;
+    [...$("wms").children].forEach((x) => { x.classList.toggle("on", x === b); x.classList.toggle("nok", x === b && wms === "NOK"); });
+    marcarMudou();
+  });
+  ["fabrica", "nf", "placa", "turno"].forEach((i) => $(i).addEventListener("input", marcarMudou));
+  $("placa").addEventListener("input", () => { $("placa").value = $("placa").value.toUpperCase().replace(/[^A-Z0-9]/g, ""); });
+
+  function marcarMudou() { registrado = null; $("pronto").classList.add("hidden"); }
+
+  async function carregarFabricas() {
+    try {
+      const r = await Ocorr.fabricas(); fabs = Ocorr.tkLista(r.lista);
+    } catch (e) { fabs = Ocorr.tkLista(Ocorr.lerCache()); }
+    $("fabrica").innerHTML = '<option value="">Escolha a fábrica…</option>' + fabs.map((f) => `<option>${esc(f.nome)}</option>`).join("");
+  }
+
+  async function carregarCurva() {
+    try { const c = JSON.parse(localStorage.getItem(CK_CURVA)); if (c && c.m) curva = c.m; } catch (e) {}
+    try {
+      const m = await RV.rpc("curva_ler");
+      if (m && typeof m === "object") { curva = m; try { localStorage.setItem(CK_CURVA, JSON.stringify({ m })); } catch (e) {} }
+    } catch (e) { /* sem rede: usa a última cópia; sem cópia, tudo vira C */ }
+  }
+  const curvaDe = (cod) => curva[String(cod)] || "C";
+
+  /* ---------- busca de produto ---------- */
+  let P = [], PN = [];
+  function indexar() { P = Catalogo.lista(); PN = P.map((p) => norm(p[1])); }
+  function buscar(q) {
+    q = norm(q).trim(); if (!q) return [];
+    const out = [];
+    if (/^\d+$/.test(q)) {
+      for (let i = 0; i < P.length && out.length < 8; i++) if (P[i][0] === q) out.push(P[i]);
+      for (let i = 0; i < P.length && out.length < 8; i++) if (P[i][0] !== q && P[i][0].startsWith(q)) out.push(P[i]);
+    }
+    const ws = q.split(/\s+/);
+    for (let i = 0; i < P.length && out.length < 8; i++) if (!out.includes(P[i]) && ws.every((w) => PN[i].includes(w) || P[i][0].includes(w))) out.push(P[i]);
+    return out;
+  }
+  $("busca").addEventListener("input", () => {
+    ultimaBusca = buscar($("busca").value);
+    const box = $("sug");
+    box.classList.toggle("hidden", !ultimaBusca.length);
+    box.innerHTML = ultimaBusca.map((p, i) => `<button type="button" data-i="${i}"><b>${esc(p[0])}</b><span>${esc(p[1])}</span></button>`).join("");
+  });
+  $("busca").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); if (ultimaBusca.length) escolher(ultimaBusca[0]); $("venc").focus(); } });
+  $("sug").addEventListener("click", (e) => { const b = e.target.closest("button[data-i]"); if (b) { escolher(ultimaBusca[+b.dataset.i]); $("venc").focus(); } });
+  function escolher(p) {
+    escolhido = { cod: p[0], nome: p[1] };
+    $("sug").classList.add("hidden"); $("busca").value = "";
+    desenharPick();
+  }
+  function desenharPick() {
+    const b = $("pick");
+    if (!escolhido) { b.classList.add("hidden"); return; }
+    const c = curvaDe(escolhido.cod);
+    b.classList.remove("hidden");
+    b.innerHTML = `<div><b>${esc(escolhido.cod)}</b> ${esc(escolhido.nome)} <span class="tag ${c}">Curva ${c}</span></div><button class="btn x" type="button" id="trocar">Trocar</button>`;
+    $("trocar").onclick = () => { escolhido = null; desenharPick(); $("busca").focus(); };
+  }
+
+  /* ---------- vencimento ao vivo ---------- */
+  $("venc").addEventListener("input", () => {
+    const dt = parseVenc($("venc").value);
+    const s = $("vencOk");
+    if (!$("venc").value.trim()) { s.textContent = "dd/mm/aa"; s.style.color = ""; return; }
+    if (!dt) { s.textContent = "data inválida"; s.style.color = "#ffb3b8"; return; }
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    s.textContent = fmt(dt) + (dt < hoje ? " · já vencido!" : "");
+    s.style.color = dt < hoje ? "#ffd96a" : "#a8e3c1";
+  });
+
+  function erro(msg) { $("erroTxt").textContent = msg; $("erro").classList.toggle("hidden", !msg); }
+
+  /* ---------- lista ---------- */
+  $("add").addEventListener("click", () => {
+    erro("");
+    if (!escolhido) return erro("Escolha o produto (pelo código ou pelo nome).");
+    const dt = parseVenc($("venc").value);
+    if (!dt) { $("fVenc").classList.add("err"); return erro("Vencimento inválido. Digite no formato 150627 ou 15/06/27."); }
+    $("fVenc").classList.remove("err");
+    const q = Math.max(1, Math.min(500, parseInt($("qtd").value, 10) || 1));
+    const v = iso(dt);
+    const ja = itens.find((i) => i.cod === escolhido.cod && i.venc === v);
+    if (ja) ja.qtd = Math.min(500, ja.qtd + q);
+    else itens.push({ cod: escolhido.cod, nome: escolhido.nome, venc: v, qtd: q });
+    $("qtd").value = "1";
+    marcarMudou(); desenhar();
+  });
+  $("lista").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-a]"); if (!b) return;
+    const i = itens[+b.dataset.i]; if (!i) return;
+    if (b.dataset.a === "mais") i.qtd = Math.min(500, i.qtd + 1);
+    else if (b.dataset.a === "menos") i.qtd = Math.max(1, i.qtd - 1);
+    else if (b.dataset.a === "del") itens.splice(+b.dataset.i, 1);
+    else if (b.dataset.a === "usar") { escolhido = { cod: i.cod, nome: i.nome }; desenharPick(); $("venc").value = fmt(deIso(i.venc)); $("venc").dispatchEvent(new Event("input")); $("venc").focus(); $("venc").select(); return; }
+    marcarMudou(); desenhar();
+  });
+  $("limpar").addEventListener("click", () => { if (itens.length && !confirm("Limpar a lista da carreta?")) return; itens = []; escolhido = null; desenharPick(); marcarMudou(); desenhar(); });
+
+  const total = () => itens.reduce((s, i) => s + i.qtd, 0);
+  function desenhar() {
+    $("totP").textContent = total();
+    $("resumo").textContent = itens.length ? itens.length + (itens.length === 1 ? " linha" : " linhas") : "";
+    if (!itens.length) { $("lista").innerHTML = '<div class="empty">Nenhum pallet adicionado.</div>'; return; }
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    const ord = itens.map((x, i) => [x, i]);
+    $("lista").innerHTML = ord.map(([x, i]) => {
+      const c = curvaDe(x.cod), dt = deIso(x.venc), venc = dt < hoje;
+      return `<div class="linha"><div class="t"><b>${esc(x.nome)} <span class="tag ${c}">${c}</span></b>
+        <span>${esc(x.cod)} · vence <b style="color:${venc ? "#ffd96a" : "inherit"}">${fmt(dt)}</b>${venc ? " (vencido)" : ""}</span></div>
+        <div class="step"><button type="button" data-a="menos" data-i="${i}">−</button><span>${x.qtd}</span><button type="button" data-a="mais" data-i="${i}">+</button></div>
+        <button class="btn" type="button" data-a="usar" data-i="${i}" title="Usar este produto de novo com outra data">Outra data</button>
+        <button class="btn danger" type="button" data-a="del" data-i="${i}">✕</button></div>`;
+    }).join("");
+  }
+
+  /* ---------- PDF (A4, 6 etiquetas por folha) ---------- */
+  const wrap = (font, texto, size, larg) => {
+    const pal = String(texto).split(/\s+/), linhas = []; let at = "";
+    for (const w of pal) { const t = at ? at + " " + w : w; if (font.widthOfTextAtSize(t, size) > larg && at) { linhas.push(at); at = w; } else at = t; }
+    if (at) linhas.push(at); return linhas;
+  };
+  async function montarPdf(c) {
+    const { PDFDocument, StandardFonts, rgb } = PDFLib;
+    const doc = await PDFDocument.create();
+    const f = await doc.embedFont(StandardFonts.Helvetica), fb = await doc.embedFont(StandardFonts.HelveticaBold);
+    const MM = 72 / 25.4, W = 210 * MM, H = 297 * MM, mx = 8 * MM, my = 8 * MM, gap = 4 * MM;
+    const cw = (W - 2 * mx - gap) / 2, ch = (H - 2 * my - 2 * gap) / 3;
+    const quando = new Date(c.quando || Date.now());
+    const hora = fmt(quando) + " " + p2(quando.getHours()) + ":" + p2(quando.getMinutes());
+    const etiquetas = [];
+    c.itens.forEach((i) => { for (let k = 0; k < i.qtd; k++) etiquetas.push(i); });
+    let pg = null;
+    etiquetas.forEach((it, n) => {
+      const pos = n % 6;
+      if (pos === 0) pg = doc.addPage([W, H]);
+      const col = pos % 2, lin = Math.floor(pos / 2);
+      const x = mx + col * (cw + gap), y = H - my - (lin + 1) * ch - lin * gap;
+      const venc = deIso(it.venc), cv = it.curva || "C", L = letra(cv, c.wms);
+      pg.drawRectangle({ x, y, width: cw, height: ch, borderColor: rgb(0, 0, 0), borderWidth: 1.2 });
+      const px = x + 4 * MM, topo = y + ch - 4 * MM;
+      pg.drawText("Cód.: " + it.cod, { x: px, y: topo - 12, size: 13, font: fb });
+      // dia-mês grande
+      const dm = venc.getDate() + "-" + (venc.getMonth() + 1);
+      pg.drawText(dm, { x: px, y: topo - 12 - 40, size: 40, font: fb });
+      pg.drawText(String(venc.getFullYear()), { x: px + fb.widthOfTextAtSize(dm, 40) + 8, y: topo - 12 - 40, size: 16, font: fb });
+      // letra R/T e curva
+      const bx = x + cw - 4 * MM - 16 * MM, by = topo - 20 * MM;
+      pg.drawRectangle({ x: bx, y: by, width: 16 * MM, height: 16 * MM, borderColor: rgb(0, 0, 0), borderWidth: 1.5, color: L === "T" ? rgb(0.85, 0.85, 0.85) : undefined });
+      const lw = fb.widthOfTextAtSize(L, 34); pg.drawText(L, { x: bx + (16 * MM - lw) / 2, y: by + 4.2 * MM, size: 34, font: fb });
+      const ct = "CURVA - " + cv, cwid = fb.widthOfTextAtSize(ct, 9);
+      pg.drawText(ct, { x: bx + (16 * MM - cwid) / 2, y: by - 11, size: 9, font: fb });
+      // nome do produto
+      let yy = topo - 96;
+      wrap(fb, it.nome, 13, cw - 8 * MM).slice(0, 2).forEach((t) => { pg.drawText(t, { x: px, y: yy, size: 13, font: fb }); yy -= 16; });
+      yy -= 6;
+      const linha = (r, v) => { pg.drawText(r, { x: px, y: yy, size: 10.5, font: f }); pg.drawText(v, { x: px + 36 * MM, y: yy, size: 10.5, font: fb }); yy -= 14; };
+      linha("Validade:", fmt(venc));
+      linha("Limite Rota (PZC):", fmt(menos(venc, 30)));
+      linha("Limite AS:", fmt(menos(venc, 60)));
+      linha("Fábrica / NF:", (c.fabrica || "-") + " / " + (c.nf || "-"));
+      linha("Placa / WMS:", (c.placa || "-") + " / " + c.wms);
+      linha("Operador:", c.operador || "-");
+      pg.drawText((c.conferente || "") + " · " + c.turno + " · " + hora, { x: px, y: y + 3 * MM, size: 8, font: f });
+    });
+    return await doc.save();
+  }
+
+  function mostrarPdf(bytes, nome, texto) {
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    const blob = new Blob([bytes], { type: "application/pdf" });
+    pdfUrl = URL.createObjectURL(blob);
+    $("abrirPdf").href = pdfUrl; $("baixarPdf").href = pdfUrl; $("baixarPdf").download = nome;
+    $("prontoTxt").textContent = texto;
+    $("pronto").classList.remove("hidden");
+    const file = new File([blob], nome, { type: "application/pdf" });
+    const pode = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+    $("compPdf").classList.toggle("hidden", !pode);
+    $("compPdf").onclick = () => navigator.share({ files: [file], title: nome }).catch(() => {});
+    $("pronto").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function dadosCabecalho() {
+    const perfil = (RV.perfilCache && RV.perfilCache()) || {};
+    return { fabrica: $("fabrica").value, nf: $("nf").value.trim(), placa: $("placa").value.trim(), operador: $("operador").value.trim(), turno: turnoAtual(), wms, conferente: perfil.nome || "" };
+  }
+
+  $("gerar").addEventListener("click", async () => {
+    $("aviso").classList.add("hidden");
+    const c = dadosCabecalho();
+    if (!c.fabrica) { $("fFab").classList.add("err"); return aviso("Escolha a fábrica."); }
+    $("fFab").classList.remove("err");
+    if (!itens.length) return aviso("Adicione pelo menos um pallet.");
+    const btn = $("gerar"); btn.disabled = true; btn.textContent = "Gerando…";
+    c.itens = itens.map((i) => ({ cod: i.cod, nome: i.nome, venc: i.venc, qtd: i.qtd, curva: curvaDe(i.cod) }));
+    c.quando = Date.now();
+    let msgReg = "";
+    try {
+      if (!registrado) {
+        const r = await RV.rpc("nri_registrar", { p_fabrica: c.fabrica, p_nf: c.nf, p_placa: c.placa, p_operador: c.operador, p_turno: c.turno, p_wms: c.wms, p_itens: c.itens });
+        registrado = r && r.id; msgReg = " Carreta registrada no histórico.";
+        historico();
+      }
+    } catch (e) { msgReg = " Não consegui registrar no histórico (" + (e.rede ? "sem internet" : (e.message || "erro")) + "), mas o PDF foi gerado."; }
+    try {
+      const bytes = await montarPdf(c);
+      mostrarPdf(bytes, "etiquetas-" + (c.placa || "carreta") + "-" + Date.now().toString(36) + ".pdf", total() + " etiqueta(s) prontas, " + Math.ceil(total() / 6) + " folha(s) A4." + msgReg);
+    } catch (e) { aviso("Não consegui gerar o PDF: " + (e.message || "erro")); }
+    btn.disabled = false; btn.textContent = "🖨️ Gerar etiquetas";
+  });
+  function aviso(t) { $("avisoTxt").textContent = t; $("aviso").classList.remove("hidden"); }
+
+  /* ---------- histórico ---------- */
+  let hist = [];
+  async function historico() {
+    try { hist = (await RV.rpc("nri_listar")) || []; } catch (e) { $("hist").innerHTML = '<div class="empty">Não consegui carregar o histórico agora.</div>'; return; }
+    if (!hist.length) { $("hist").innerHTML = '<div class="empty">Nenhuma carreta identificada ainda.</div>'; return; }
+    $("hist").innerHTML = hist.map((h, i) => {
+      const d = new Date(h.criado_em);
+      return `<div class="li"><div class="t"><b>${esc(h.fabrica)} · ${h.pallets} pallets</b><span>${fmt(d)} ${p2(d.getHours())}:${p2(d.getMinutes())} · ${esc(h.placa || "sem placa")}${h.nf ? " · NF " + esc(h.nf) : ""}${h.por ? " · " + esc(h.por) : ""}</span></div>
+        <button class="btn" data-h="${i}">Reimprimir</button></div>`;
+    }).join("");
+  }
+  $("hist").addEventListener("click", async (e) => {
+    const b = e.target.closest("button[data-h]"); if (!b) return;
+    const h = hist[+b.dataset.h]; if (!h) return;
+    b.disabled = true;
+    try {
+      const bytes = await montarPdf({ fabrica: h.fabrica, nf: h.nf, placa: h.placa, operador: h.operador, turno: h.turno, wms: h.wms, conferente: h.por || "", quando: h.criado_em, itens: h.itens });
+      mostrarPdf(bytes, "etiquetas-" + (h.placa || "carreta") + "-" + h.id + ".pdf", "Reimpressão: " + h.pallets + " etiqueta(s).");
+    } catch (er) { aviso("Não consegui gerar o PDF: " + (er.message || "erro")); }
+    b.disabled = false;
+  });
+
+  /* ---------- início ---------- */
+  Catalogo.carregar().then(indexar).catch(indexar);
+  indexar();
+  carregarFabricas(); carregarCurva().then(desenhar); historico(); desenhar();
+})();
+</script>
+</body>
+</html>

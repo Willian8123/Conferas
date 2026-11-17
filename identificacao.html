@@ -62,6 +62,8 @@
     <div class="field"><label>WMS</label>
       <div class="seg" id="wms"><button type="button" class="on" data-v="OK">OK</button><button type="button" data-v="NOK">NOK</button></div></div>
   </div>
+  <div class="field" style="margin-top:10px"><label for="porPallet">Etiquetas por pallet</label>
+    <select id="porPallet"><option value="3">3 (uma folha por pallet)</option><option value="2">2</option><option value="1">1</option></select></div>
   <p class="hint" style="margin:8px 0 0">Data e hora entram sozinhas na etiqueta, e o conferente é o seu login.</p>
 
   <div class="sec">2. Pallets <small>vale um por vencimento</small></div>
@@ -84,7 +86,7 @@
 
   <div class="callout yellow hidden" id="aviso"><p id="avisoTxt"></p></div>
   <div class="totbar">
-    <div class="n"><b id="totP">0</b> pallets</div>
+    <div class="n"><b id="totP">0</b> pallets · <b id="totF">0</b> folhas</div>
     <button class="btn" type="button" id="limpar">Limpar</button>
     <button class="btn primary" type="button" id="gerar">🖨️ Gerar etiquetas</button>
   </div>
@@ -143,7 +145,8 @@
 
   /* ---------- cabeçalho ---------- */
   $("turnoAuto").textContent = "agora: " + turnoAuto();
-  try { $("operador").value = localStorage.getItem(CK_OP) || ""; } catch (e) {}
+  try { $("operador").value = localStorage.getItem(CK_OP) || ""; $("porPallet").value = localStorage.getItem("ident_pp_v1") || "3"; } catch (e) {}
+  $("porPallet").addEventListener("change", () => { try { localStorage.setItem("ident_pp_v1", $("porPallet").value); } catch (e) {} desenhar(); });
   $("operador").addEventListener("change", () => { try { localStorage.setItem(CK_OP, $("operador").value.trim()); } catch (e) {} marcarMudou(); });
   $("wms").addEventListener("click", (e) => {
     const b = e.target.closest("button"); if (!b) return;
@@ -151,7 +154,7 @@
     [...$("wms").children].forEach((x) => { x.classList.toggle("on", x === b); x.classList.toggle("nok", x === b && wms === "NOK"); });
     marcarMudou();
   });
-  ["fabrica", "nf", "placa", "turno"].forEach((i) => $(i).addEventListener("input", marcarMudou));
+  ["fabrica", "nf", "placa", "turno", "porPallet"].forEach((i) => $(i).addEventListener("input", marcarMudou));
   $("placa").addEventListener("input", () => { $("placa").value = $("placa").value.toUpperCase().replace(/[^A-Z0-9]/g, ""); });
 
   function marcarMudou() { registrado = null; $("pronto").classList.add("hidden"); }
@@ -248,8 +251,10 @@
   $("limpar").addEventListener("click", () => { if (itens.length && !confirm("Limpar a lista da carreta?")) return; itens = []; escolhido = null; desenharPick(); marcarMudou(); desenhar(); });
 
   const total = () => itens.reduce((s, i) => s + i.qtd, 0);
+  const porPallet = () => parseInt($("porPallet").value, 10) || 3;
+  const folhas = (n, pp) => Math.ceil((n == null ? total() : n) * (pp || porPallet()) / 3);
   function desenhar() {
-    $("totP").textContent = total();
+    $("totP").textContent = total(); $("totF").textContent = folhas();
     $("resumo").textContent = itens.length ? itens.length + (itens.length === 1 ? " linha" : " linhas") : "";
     if (!itens.length) { $("lista").innerHTML = '<div class="empty">Nenhum pallet adicionado.</div>'; return; }
     const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
@@ -281,7 +286,8 @@
     const quando = new Date(c.quando || Date.now());
     const hora = fmt(quando) + " " + p2(quando.getHours()) + ":" + p2(quando.getMinutes());
     const etiquetas = [];
-    c.itens.forEach((i) => { for (let k = 0; k < i.qtd; k++) etiquetas.push(i); });
+    const pp = c.porPallet || 3; // cada pallet leva as suas etiquetas iguais (3 = uma folha inteira por pallet)
+    c.itens.forEach((i) => { for (let k = 0; k < i.qtd; k++) for (let j = 0; j < pp; j++) etiquetas.push(i); });
     let pg = null;
     etiquetas.forEach((it, n) => {
       const pos = n % 3;
@@ -383,7 +389,7 @@
     let oficiais = {};
     try { oficiais = (await RV.rpc("nri_nomes_ler", { p_cods: [...new Set(itens.map((i) => i.cod))] })) || {}; } catch (e) {}
     c.itens = itens.map((i) => ({ cod: i.cod, nome: oficiais[i.cod] || i.nome, venc: i.venc, qtd: i.qtd, curva: curvaDe(i.cod) }));
-    c.quando = Date.now();
+    c.quando = Date.now(); c.porPallet = porPallet();
     let msgReg = "";
     try {
       if (!registrado) {
@@ -394,7 +400,7 @@
     } catch (e) { msgReg = " Não consegui registrar no histórico (" + (e.rede ? "sem internet" : (e.message || "erro")) + "), mas o PDF foi gerado."; }
     try {
       const bytes = await montarPdf(c);
-      mostrarPdf(bytes, "etiquetas-" + (c.placa || "carreta") + "-" + Date.now().toString(36) + ".pdf", total() + " etiqueta(s) prontas, " + Math.ceil(total() / 3) + " folha(s) A4." + msgReg);
+      mostrarPdf(bytes, "etiquetas-" + (c.placa || "carreta") + "-" + Date.now().toString(36) + ".pdf", total() + " pallet(s): " + (total() * c.porPallet) + " etiqueta(s) em " + folhas(total(), c.porPallet) + " folha(s) A4." + msgReg);
     } catch (e) { aviso("Não consegui gerar o PDF: " + (e.message || "erro")); }
     btn.disabled = false; btn.textContent = "🖨️ Gerar etiquetas";
   });
@@ -416,8 +422,8 @@
     const h = hist[+b.dataset.h]; if (!h) return;
     b.disabled = true;
     try {
-      const bytes = await montarPdf({ fabrica: h.fabrica, nf: h.nf, placa: h.placa, operador: h.operador, turno: h.turno, wms: h.wms, conferente: h.por || "", quando: h.criado_em, itens: h.itens });
-      mostrarPdf(bytes, "etiquetas-" + (h.placa || "carreta") + "-" + h.id + ".pdf", "Reimpressão: " + h.pallets + " etiqueta(s).");
+      const bytes = await montarPdf({ fabrica: h.fabrica, nf: h.nf, placa: h.placa, operador: h.operador, turno: h.turno, wms: h.wms, conferente: h.por || "", quando: h.criado_em, itens: h.itens, porPallet: porPallet() });
+      mostrarPdf(bytes, "etiquetas-" + (h.placa || "carreta") + "-" + h.id + ".pdf", "Reimpressão: " + h.pallets + " pallet(s) em " + folhas(h.pallets, porPallet()) + " folha(s) A4.");
     } catch (er) { aviso("Não consegui gerar o PDF: " + (er.message || "erro")); }
     b.disabled = false;
   });
